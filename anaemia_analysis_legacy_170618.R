@@ -2,55 +2,7 @@
 # Historical data MORU 1986-2016
 ## version
 rm(list=ls())  # remove all lists in environment
-graphics.off()  # shut down all open graphics devices
-
-setwd("~/Dropbox/projects/Historical data/full_2018")
-
-## prepare ppt dataset knowns
-dataset <- read.csv("DBallCore2016_nospec.csv", header=T,na.strings = "", stringsAsFactors = FALSE)
-
-
-#dataset 
-table(dataset$studyID)
-dataset$studyID[dataset$studyID== "05may2008"] = NA 
-dataset$studyID[dataset$studyID== "18oct1986"] = NA 
-dataset$studyID = as.factor(dataset$studyID)
-
-# Dichotomous outcomes 
-dataset$outcome = NA
-dataset$outcome[dataset$died=="Yes"] = 1
-dataset$outcome[dataset$died=="No"] = 0
-dataset$outcome = dataset$outcome
-
-## Hct 
-dataset$HCT = dataset$lbhct
-dataset$HCT[is.na(dataset$lbhct)] = dataset$hctadm[is.na(dataset$lbhct)]
-dataset$HCT[is.na(dataset$lbhct) & is.na(dataset$hctadm) ] = dataset$lbihct[is.na(dataset$lbhct) & is.na(dataset$hctadm) ] 
-dataset$HCT = as.numeric(as.character(dataset$HCT))
-
-#Base excess 
-dataset$BD <- -(dataset$lbibe)
-dataset$BD  = as.numeric(as.character(dataset$BD))
-
-# parasitaemia
-dataset$paraul = as.numeric(as.character(dataset$paraul))
-dataset$paraul[dataset$paraul<1000] = NA
-dataset$LPAR = log10(dataset$paraul)
-
-## BUN
-dataset$BUN = NA
-dataset$BUN = dataset$lbibun
-dataset$BUN[is.na(dataset$lbibun)] = dataset$lbbbun[is.na(dataset$lbibun)]
-dataset$BUN = as.numeric(as.character(dataset$BUN))
-
-dataset$systolicbpCri = as.factor(dataset$systolicbpCri) 
-
-m <- subset(dataset, select=c(outcome,studyID, systolicbpCri, HCT, LPAR, BD, BUN, AgeInYear))
-m$SYS_BP_NUMERIC = NA
-m$SYS_BP_NUMERIC[as.character(m$systolicbpCri)=='Yes']=1
-m$SYS_BP_NUMERIC[as.character(m$systolicbpCri)=='No']=0
-m$AgeInYear = as.numeric(m$AgeInYear)
-
+load('RData/Data.R')
 ## Model 1
 library(mgcv)
 complete_cases = apply(m, 1, function(x) sum(is.na(x))) == 0
