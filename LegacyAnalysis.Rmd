@@ -1,0 +1,31 @@
+---
+title: "Charactersing independent predictors in severe malaria"
+output: html_notebook
+---
+
+# Background
+
+This looks at the severe malaria legacy dataset from MORU
+
+```{r, echo=FALSE}
+load('RData/Data.R')
+complete_cases = apply(m, 1, function(x) sum(is.na(x))) == 0
+Leg_data = m[complete_cases,]
+```
+
+
+```{r}
+# For the GAM modelling
+library(mgcv)
+```
+
+
+# Full Model predicting death
+
+```{r deathmodel}
+mod_full = gam(outcome ~ s(HCT, AgeInYear,BUN, BD,  LPAR , SYS_BP_NUMERIC) + 
+                  s(studyID, bs='re'),
+                data=m[complete_cases,], family=binomial)
+```
+
+# Direct effect of anaemia on death
