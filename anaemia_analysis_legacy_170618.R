@@ -1,4 +1,3 @@
-
 # Historical data MORU 1986-2016
 ## version
 rm(list=ls())  # remove all lists in environment
@@ -6,7 +5,7 @@ load('RData/Data.R')
 ## Model 1
 library(mgcv)
 complete_cases = apply(m, 1, function(x) sum(is.na(x))) == 0
-mod_pars_0<-gam(outcome ~ s(HCT, AgeInYear) + s(BUN, BD) + LPAR + SYS_BP_NUMERIC + s(studyID, bs='re'),
+mod_pars_0<-gam(outcome ~ s(HCT, AgeInYear,BUN, BD,  LPAR , SYS_BP_NUMERIC) + s(studyID, bs='re'),
                 data=m[complete_cases,], family=binomial)
 
 plot(NA,NA, xlim=c(4,45), ylim=c(0,40),ylab='mortality', xlab='Haematocrit')
