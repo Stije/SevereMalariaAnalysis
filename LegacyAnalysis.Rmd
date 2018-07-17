@@ -26,7 +26,7 @@ library(rpart.plot)
 # Full Model predicting death
 
 ```{r deathmodel}
-mod_full = gam(outcome ~ s(HCT)+ s(AgeInYear) + BUN + BD + s(LPAR) + SYS_BP_NUMERIC + 
+mod_full = gam(outcome ~ s(HCT, LPAR) + AgeInYear + BUN + BD + SYS_BP_NUMERIC + 
                   s(studyID, bs='re'),
                 data=Leg_data, family=binomial)
 ```
@@ -34,26 +34,27 @@ mod_full = gam(outcome ~ s(HCT)+ s(AgeInYear) + BUN + BD + s(LPAR) + SYS_BP_NUME
 Let's simulate all possible patients and compute their corresponding probability of death.
 
 ```{r}
+# Probably want to simulate from the marginals here...
 All_patients = expand.grid(HCT=seq(4,45,by=2), 
-                           BUN=seq(0,80,length.out = 10), 
-                           BD=seq(-4,25, length.out = 15), 
+                           BUN=seq(0,80,length.out = 5), 
+                           BD=seq(-4,25, length.out = 5), 
                            SYS_BP_NUMERIC=0:1, 
                            LPAR=3:7, 
                            AgeInYear=c(1,2,3,4,5,10,20,50))
 All_patients$studyID = Leg_data$studyID[1]
 ys = 100*predict(mod_pars_0, newdata = All_patients, exclude="s(studyID)", type='response')
 hist(ys, xlab='Probability of death', freq=F, yaxt='n', ylab='', main='')
-abline(v=10, lwd=3, col='red')
+abline(v=1, lwd=3, col='red')
 ```
 
 We set a threshold mortality underneath which we term 'non-severe', above which is 'severe'.
 ```{r}
-threshold = 5 # this is in percent
-SeverityLabel = array(dim=length(ys))
+threshold = 1 # this is in percent
+SeverityLabel = array(NA, dim=length(ys))
 SeverityLabel[ys>threshold] = 1
 SeverityLabel[ys<= threshold] = 0
 All_patients$SeverityLabel = SeverityLabel
-plot(jitter(All_patients$HCT), jitter(All_patients$LPAR), col=SeverityLabel+1, pch='.')
+rpart(SeverityLabel~ HCT + BUN + BD + LPAR, data = All_patients)
 ```
 
 
