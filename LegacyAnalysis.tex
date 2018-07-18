@@ -273,37 +273,44 @@ Before fitting the more complex GAM models we explore the standard glm
 \end{verbatim}
 
 Now let's make counterfactual predictions of anaemia on death for the
-patients in the database. The way to interpret this `counterfactual'
-plot is as follows: suppose that every individual in the dataset was
-assigned (as in a intervention) a specific haematocrit \(X\), what would
-the resulting per patient probability of death be. Here we summarise
-these probabilities by the predicted mean probability of death and 80\%
-predictive intervals.
+patients in the database.
 
 \begin{Shaded}
 \begin{Highlighting}[]
-\NormalTok{overall_mortality =}\StringTok{ }\DecValTok{100}\OperatorTok{*}\KeywordTok{mean}\NormalTok{(Complete_Leg_data}\OperatorTok{$}\NormalTok{outcome)}
+\NormalTok{myquantiles =}\StringTok{ }\KeywordTok{c}\NormalTok{(}\FloatTok{0.25}\NormalTok{,}\FloatTok{0.5}\NormalTok{,}\FloatTok{0.75}\NormalTok{) }\CommentTok{# this is 50% predictive interval}
+
+\NormalTok{overall_median_mortality =}\StringTok{ }\KeywordTok{median}\NormalTok{(}\DecValTok{100}\OperatorTok{*}\KeywordTok{predict}\NormalTok{(mod_full, }\DataTypeTok{type=}\StringTok{'response'}\NormalTok{))}
 \KeywordTok{par}\NormalTok{(}\DataTypeTok{las=}\DecValTok{1}\NormalTok{, }\DataTypeTok{bty=}\StringTok{'n'}\NormalTok{)}
-\NormalTok{x_hcts =}\StringTok{ }\KeywordTok{seq}\NormalTok{(}\DecValTok{4}\NormalTok{,}\DecValTok{45}\NormalTok{, }\DataTypeTok{by=}\NormalTok{.}\DecValTok{5}\NormalTok{)}
-\NormalTok{probs =}\StringTok{ }\KeywordTok{array}\NormalTok{(}\DataTypeTok{dim =} \KeywordTok{c}\NormalTok{(}\DecValTok{3}\NormalTok{, }\KeywordTok{length}\NormalTok{(x_hcts)))}
+\NormalTok{x_hcts =}\StringTok{ }\KeywordTok{seq}\NormalTok{(}\DecValTok{4}\NormalTok{,}\DecValTok{45}\NormalTok{, }\DataTypeTok{by=}\DecValTok{1}\NormalTok{)}
+\NormalTok{probs_lin =}\StringTok{ }\KeywordTok{array}\NormalTok{(}\DataTypeTok{dim =} \KeywordTok{c}\NormalTok{(}\DecValTok{3}\NormalTok{, }\KeywordTok{length}\NormalTok{(x_hcts)))}
 \ControlFlowTok{for}\NormalTok{(i }\ControlFlowTok{in} \DecValTok{1}\OperatorTok{:}\KeywordTok{length}\NormalTok{(x_hcts))\{}
 \NormalTok{  mydata =}\StringTok{ }\NormalTok{Complete_Leg_data}
 \NormalTok{  mydata}\OperatorTok{$}\NormalTok{HCT=x_hcts[i]}
 \NormalTok{  ys =}\StringTok{ }\DecValTok{100}\OperatorTok{*}\KeywordTok{predict}\NormalTok{(mod_full, }\DataTypeTok{newdata =}\NormalTok{ mydata, }\DataTypeTok{re.form=}\OtherTok{NA}\NormalTok{, }\DataTypeTok{type=}\StringTok{'response'}\NormalTok{)}
-\NormalTok{  probs[}\DecValTok{2}\NormalTok{,i] =}\StringTok{ }\KeywordTok{mean}\NormalTok{(ys)}
-\NormalTok{  probs[}\KeywordTok{c}\NormalTok{(}\DecValTok{1}\NormalTok{,}\DecValTok{3}\NormalTok{),i] =}\StringTok{ }\KeywordTok{quantile}\NormalTok{(ys, }\DataTypeTok{probs=}\KeywordTok{c}\NormalTok{(}\FloatTok{0.1}\NormalTok{,}\FloatTok{0.9}\NormalTok{))}
+\NormalTok{  probs_lin[,i] =}\StringTok{ }\KeywordTok{quantile}\NormalTok{(ys, }\DataTypeTok{probs=}\NormalTok{myquantiles)}
 \NormalTok{\}}
-\KeywordTok{plot}\NormalTok{(x_hcts,probs[}\DecValTok{2}\NormalTok{,], }\DataTypeTok{xlim=}\KeywordTok{c}\NormalTok{(}\DecValTok{4}\NormalTok{,}\DecValTok{45}\NormalTok{), }\DataTypeTok{ylab=}\StringTok{'Predicted probability of death'}\NormalTok{, }
-     \DataTypeTok{xlab=}\StringTok{'Haematocrit (%)'}\NormalTok{, }\DataTypeTok{ylim=}\KeywordTok{c}\NormalTok{(}\DecValTok{0}\NormalTok{,}\DecValTok{50}\NormalTok{), }\DataTypeTok{lty=}\DecValTok{1}\NormalTok{, }\DataTypeTok{lwd=}\DecValTok{3}\NormalTok{, }\DataTypeTok{type=}\StringTok{'l'}\NormalTok{)}
-\KeywordTok{lines}\NormalTok{(x_hcts, probs[}\DecValTok{1}\NormalTok{,], }\DataTypeTok{lty=}\DecValTok{2}\NormalTok{, }\DataTypeTok{lwd=}\DecValTok{2}\NormalTok{)}
-\KeywordTok{lines}\NormalTok{(x_hcts, probs[}\DecValTok{3}\NormalTok{,], }\DataTypeTok{lty=}\DecValTok{2}\NormalTok{, }\DataTypeTok{lwd=}\DecValTok{2}\NormalTok{)}
-\KeywordTok{abline}\NormalTok{(}\DataTypeTok{h=}\NormalTok{overall_mortality, }\DataTypeTok{lwd=}\DecValTok{3}\NormalTok{, }\DataTypeTok{col=}\StringTok{'blue'}\NormalTok{,}\DataTypeTok{lty=}\DecValTok{2}\NormalTok{)}
-\KeywordTok{legend}\NormalTok{(}\StringTok{'topleft'}\NormalTok{, }\DataTypeTok{col=}\KeywordTok{c}\NormalTok{(}\StringTok{'black'}\NormalTok{,}\StringTok{'black'}\NormalTok{,}\StringTok{'blue'}\NormalTok{), }\DataTypeTok{lwd=}\DecValTok{3}\NormalTok{, }\DataTypeTok{lty=}\KeywordTok{c}\NormalTok{(}\DecValTok{1}\NormalTok{,}\DecValTok{2}\NormalTok{,}\DecValTok{2}\NormalTok{),}
-       \DataTypeTok{legend =} \KeywordTok{c}\NormalTok{(}\StringTok{'Mean predicted mortality'}\NormalTok{, }\StringTok{'80% predicted interval'}\NormalTok{,}\StringTok{'Observed mortality'}\NormalTok{))}
 \end{Highlighting}
 \end{Shaded}
 
-\includegraphics{LegacyAnalysis_files/figure-latex/counterfactualMortality-1.pdf}
+The way to interpret this `counterfactual' plot is as follows: suppose
+that every individual in the dataset was assigned (as in a intervention)
+a specific haematocrit \(X\), what would the resulting per patient
+probability of death be. Here we summarise these probabilities by the
+predicted mean probability of death and 80\% predictive intervals.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{plot}\NormalTok{(x_hcts,probs_lin[}\DecValTok{2}\NormalTok{,], }\DataTypeTok{xlim=}\KeywordTok{c}\NormalTok{(}\DecValTok{4}\NormalTok{,}\DecValTok{45}\NormalTok{), }\DataTypeTok{ylab=}\StringTok{'Predicted probability of death'}\NormalTok{, }
+     \DataTypeTok{xlab=}\StringTok{'Haematocrit (%)'}\NormalTok{, }\DataTypeTok{ylim=}\KeywordTok{c}\NormalTok{(}\DecValTok{0}\NormalTok{,}\DecValTok{30}\NormalTok{), }\DataTypeTok{lty=}\DecValTok{1}\NormalTok{, }\DataTypeTok{lwd=}\DecValTok{3}\NormalTok{, }\DataTypeTok{type=}\StringTok{'l'}\NormalTok{)}
+\KeywordTok{lines}\NormalTok{(x_hcts, probs_lin[}\DecValTok{1}\NormalTok{,], }\DataTypeTok{lty=}\DecValTok{2}\NormalTok{, }\DataTypeTok{lwd=}\DecValTok{2}\NormalTok{)}
+\KeywordTok{lines}\NormalTok{(x_hcts, probs_lin[}\DecValTok{3}\NormalTok{,], }\DataTypeTok{lty=}\DecValTok{2}\NormalTok{, }\DataTypeTok{lwd=}\DecValTok{2}\NormalTok{)}
+\KeywordTok{abline}\NormalTok{(}\DataTypeTok{h=}\NormalTok{overall_median_mortality, }\DataTypeTok{lwd=}\DecValTok{3}\NormalTok{, }\DataTypeTok{col=}\StringTok{'blue'}\NormalTok{,}\DataTypeTok{lty=}\DecValTok{2}\NormalTok{)}
+\KeywordTok{legend}\NormalTok{(}\StringTok{'topleft'}\NormalTok{, }\DataTypeTok{col=}\KeywordTok{c}\NormalTok{(}\StringTok{'black'}\NormalTok{,}\StringTok{'black'}\NormalTok{,}\StringTok{'blue'}\NormalTok{), }\DataTypeTok{lwd=}\DecValTok{3}\NormalTok{, }\DataTypeTok{lty=}\KeywordTok{c}\NormalTok{(}\DecValTok{1}\NormalTok{,}\DecValTok{2}\NormalTok{,}\DecValTok{2}\NormalTok{),}
+       \DataTypeTok{legend =} \KeywordTok{c}\NormalTok{(}\StringTok{'Median counterfactual value'}\NormalTok{, }\StringTok{'25th and 75th counterfactual quantiles'}\NormalTok{,}\StringTok{'Retrodicted median value'}\NormalTok{))}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{LegacyAnalysis_files/figure-latex/unnamed-chunk-4-1.pdf}
 
 \subsection{More complex GAM model}\label{more-complex-gam-model}
 
@@ -353,16 +360,14 @@ for the dataset for all values of the haematocrit:
 
 \begin{Shaded}
 \begin{Highlighting}[]
-\NormalTok{overall_mortality =}\StringTok{ }\DecValTok{100}\OperatorTok{*}\KeywordTok{mean}\NormalTok{(Complete_Leg_data}\OperatorTok{$}\NormalTok{outcome)}
+\NormalTok{overall_median_mortalityGAM =}\StringTok{ }\KeywordTok{median}\NormalTok{(}\DecValTok{100}\OperatorTok{*}\KeywordTok{predict}\NormalTok{(mod_full_GAM, }\DataTypeTok{type=}\StringTok{'response'}\NormalTok{))}
 \KeywordTok{par}\NormalTok{(}\DataTypeTok{las=}\DecValTok{1}\NormalTok{, }\DataTypeTok{bty=}\StringTok{'n'}\NormalTok{)}
-\NormalTok{x_hcts =}\StringTok{ }\KeywordTok{seq}\NormalTok{(}\DecValTok{4}\NormalTok{,}\DecValTok{45}\NormalTok{, }\DataTypeTok{by=}\NormalTok{.}\DecValTok{5}\NormalTok{)}
-\NormalTok{probs =}\StringTok{ }\KeywordTok{array}\NormalTok{(}\DataTypeTok{dim =} \KeywordTok{c}\NormalTok{(}\DecValTok{3}\NormalTok{, }\KeywordTok{length}\NormalTok{(x_hcts)))}
+\NormalTok{probs_gam =}\StringTok{ }\KeywordTok{array}\NormalTok{(}\DataTypeTok{dim =} \KeywordTok{c}\NormalTok{(}\DecValTok{3}\NormalTok{, }\KeywordTok{length}\NormalTok{(x_hcts)))}
 \ControlFlowTok{for}\NormalTok{(i }\ControlFlowTok{in} \DecValTok{1}\OperatorTok{:}\KeywordTok{length}\NormalTok{(x_hcts))\{}
 \NormalTok{  mydata =}\StringTok{ }\NormalTok{Complete_Leg_data}
 \NormalTok{  mydata}\OperatorTok{$}\NormalTok{HCT=x_hcts[i]}
 \NormalTok{  ys =}\StringTok{ }\DecValTok{100}\OperatorTok{*}\KeywordTok{predict}\NormalTok{(mod_full_GAM, }\DataTypeTok{newdata =}\NormalTok{ mydata, }\DataTypeTok{re.form=}\OtherTok{NA}\NormalTok{, }\DataTypeTok{type=}\StringTok{'response'}\NormalTok{)}
-\NormalTok{  probs[}\DecValTok{2}\NormalTok{,i] =}\StringTok{ }\KeywordTok{mean}\NormalTok{(ys)}
-\NormalTok{  probs[}\KeywordTok{c}\NormalTok{(}\DecValTok{1}\NormalTok{,}\DecValTok{3}\NormalTok{),i] =}\StringTok{ }\KeywordTok{quantile}\NormalTok{(ys, }\DataTypeTok{probs=}\KeywordTok{c}\NormalTok{(}\FloatTok{0.1}\NormalTok{,}\FloatTok{0.9}\NormalTok{))}
+\NormalTok{  probs_gam[,i] =}\StringTok{ }\KeywordTok{quantile}\NormalTok{(ys, }\DataTypeTok{probs=}\NormalTok{myquantiles)}
 \NormalTok{\}}
 \end{Highlighting}
 \end{Shaded}
@@ -372,18 +377,34 @@ this model: below 20 is protective, above 20 plateaus out:
 
 \begin{Shaded}
 \begin{Highlighting}[]
-\KeywordTok{par}\NormalTok{(}\DataTypeTok{las=}\DecValTok{1}\NormalTok{, }\DataTypeTok{bty=}\StringTok{'n'}\NormalTok{)}
-\KeywordTok{plot}\NormalTok{(x_hcts,probs[}\DecValTok{2}\NormalTok{,], }\DataTypeTok{xlim=}\KeywordTok{c}\NormalTok{(}\DecValTok{4}\NormalTok{,}\DecValTok{45}\NormalTok{), }\DataTypeTok{ylab=}\StringTok{'Predicted probability of death'}\NormalTok{, }
-     \DataTypeTok{xlab=}\StringTok{'Haematocrit (%)'}\NormalTok{, }\DataTypeTok{ylim=}\KeywordTok{c}\NormalTok{(}\DecValTok{0}\NormalTok{,}\DecValTok{40}\NormalTok{), }\DataTypeTok{lty=}\DecValTok{1}\NormalTok{, }\DataTypeTok{lwd=}\DecValTok{3}\NormalTok{, }\DataTypeTok{type=}\StringTok{'l'}\NormalTok{)}
-\KeywordTok{lines}\NormalTok{(x_hcts, probs[}\DecValTok{1}\NormalTok{,], }\DataTypeTok{lty=}\DecValTok{2}\NormalTok{, }\DataTypeTok{lwd=}\DecValTok{2}\NormalTok{)}
-\KeywordTok{lines}\NormalTok{(x_hcts, probs[}\DecValTok{3}\NormalTok{,], }\DataTypeTok{lty=}\DecValTok{2}\NormalTok{, }\DataTypeTok{lwd=}\DecValTok{2}\NormalTok{)}
-\KeywordTok{abline}\NormalTok{(}\DataTypeTok{h=}\NormalTok{overall_mortality, }\DataTypeTok{lwd=}\DecValTok{3}\NormalTok{, }\DataTypeTok{col=}\StringTok{'blue'}\NormalTok{,}\DataTypeTok{lty=}\DecValTok{2}\NormalTok{)}
-\KeywordTok{legend}\NormalTok{(}\StringTok{'topleft'}\NormalTok{, }\DataTypeTok{col=}\KeywordTok{c}\NormalTok{(}\StringTok{'black'}\NormalTok{,}\StringTok{'black'}\NormalTok{,}\StringTok{'blue'}\NormalTok{), }\DataTypeTok{lwd=}\DecValTok{3}\NormalTok{, }\DataTypeTok{lty=}\KeywordTok{c}\NormalTok{(}\DecValTok{1}\NormalTok{,}\DecValTok{2}\NormalTok{,}\DecValTok{2}\NormalTok{),}
-       \DataTypeTok{legend =} \KeywordTok{c}\NormalTok{(}\StringTok{'Mean predicted mortality'}\NormalTok{, }\StringTok{'80% predicted interval'}\NormalTok{,}\StringTok{'Observed mortality'}\NormalTok{))}
+\CommentTok{#}
+\KeywordTok{par}\NormalTok{(}\DataTypeTok{las=}\DecValTok{1}\NormalTok{, }\DataTypeTok{mfrow=}\KeywordTok{c}\NormalTok{(}\DecValTok{1}\NormalTok{,}\DecValTok{2}\NormalTok{), }\DataTypeTok{bty=}\StringTok{'n'}\NormalTok{, }\DataTypeTok{mar=}\KeywordTok{c}\NormalTok{(}\DecValTok{4}\NormalTok{,}\DecValTok{4}\NormalTok{,}\DecValTok{1}\NormalTok{,}\DecValTok{1}\NormalTok{))}
+
+
+\KeywordTok{plot}\NormalTok{(x_hcts,probs_lin[}\DecValTok{2}\NormalTok{,], }\DataTypeTok{xlim=}\KeywordTok{c}\NormalTok{(}\DecValTok{4}\NormalTok{,}\DecValTok{45}\NormalTok{), }\DataTypeTok{ylab=}\StringTok{'Predicted probability of death'}\NormalTok{, }
+     \DataTypeTok{xlab=}\StringTok{'Haematocrit (%)'}\NormalTok{, }\DataTypeTok{ylim=}\KeywordTok{c}\NormalTok{(}\DecValTok{0}\NormalTok{,}\DecValTok{25}\NormalTok{), }\DataTypeTok{lty=}\DecValTok{1}\NormalTok{, }\DataTypeTok{lwd=}\DecValTok{3}\NormalTok{, }\DataTypeTok{type=}\StringTok{'l'}\NormalTok{)}
+\KeywordTok{lines}\NormalTok{(x_hcts, probs_lin[}\DecValTok{1}\NormalTok{,], }\DataTypeTok{lty=}\DecValTok{2}\NormalTok{, }\DataTypeTok{lwd=}\DecValTok{2}\NormalTok{)}
+\KeywordTok{lines}\NormalTok{(x_hcts, probs_lin[}\DecValTok{3}\NormalTok{,], }\DataTypeTok{lty=}\DecValTok{2}\NormalTok{, }\DataTypeTok{lwd=}\DecValTok{2}\NormalTok{)}
+\KeywordTok{abline}\NormalTok{(}\DataTypeTok{h=}\NormalTok{overall_median_mortality, }\DataTypeTok{lwd=}\DecValTok{3}\NormalTok{, }\DataTypeTok{col=}\StringTok{'blue'}\NormalTok{,}\DataTypeTok{lty=}\DecValTok{2}\NormalTok{)}
+\KeywordTok{title}\NormalTok{(}\StringTok{'Logistic regression model'}\NormalTok{)}
+\NormalTok{### And now the GAM model}
+\KeywordTok{plot}\NormalTok{(x_hcts,probs_gam[}\DecValTok{2}\NormalTok{,], }\DataTypeTok{xlim=}\KeywordTok{c}\NormalTok{(}\DecValTok{4}\NormalTok{,}\DecValTok{45}\NormalTok{), }\DataTypeTok{ylab=}\StringTok{'Predicted probability of death'}\NormalTok{, }
+     \DataTypeTok{xlab=}\StringTok{'Haematocrit (%)'}\NormalTok{, }\DataTypeTok{ylim=}\KeywordTok{c}\NormalTok{(}\DecValTok{0}\NormalTok{,}\DecValTok{25}\NormalTok{), }\DataTypeTok{lty=}\DecValTok{1}\NormalTok{, }\DataTypeTok{lwd=}\DecValTok{3}\NormalTok{, }\DataTypeTok{type=}\StringTok{'l'}\NormalTok{)}
+\KeywordTok{lines}\NormalTok{(x_hcts, probs_gam[}\DecValTok{1}\NormalTok{,], }\DataTypeTok{lty=}\DecValTok{2}\NormalTok{, }\DataTypeTok{lwd=}\DecValTok{2}\NormalTok{)}
+\KeywordTok{lines}\NormalTok{(x_hcts, probs_gam[}\DecValTok{3}\NormalTok{,], }\DataTypeTok{lty=}\DecValTok{2}\NormalTok{, }\DataTypeTok{lwd=}\DecValTok{2}\NormalTok{)}
+\KeywordTok{abline}\NormalTok{(}\DataTypeTok{h=}\NormalTok{overall_median_mortalityGAM, }\DataTypeTok{lwd=}\DecValTok{3}\NormalTok{, }\DataTypeTok{col=}\StringTok{'blue'}\NormalTok{,}\DataTypeTok{lty=}\DecValTok{2}\NormalTok{)}
+\KeywordTok{title}\NormalTok{(}\StringTok{'Generalised additive model'}\NormalTok{)}
 \end{Highlighting}
 \end{Shaded}
 
 \includegraphics{LegacyAnalysis_files/figure-latex/counterfactualMortality_GAM-1.pdf}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{#legend('bottomright', col=c('black','black','blue'), lwd=3, lty=c(1,2,2),}
+\CommentTok{#       legend = c('Mean predicted mortality', '80% predicted interval','Observed #mortality'))}
+\end{Highlighting}
+\end{Shaded}
 
 
 \end{document}

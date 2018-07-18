@@ -100,7 +100,7 @@ myquantiles = c(0.25,0.5,0.75) # this is 50% predictive interval
 
 overall_median_mortality = median(100*predict(mod_full, type='response'))
 par(las=1, bty='n')
-x_hcts = seq(4,45, by=.5)
+x_hcts = seq(4,45, by=1)
 probs_lin = array(dim = c(3, length(x_hcts)))
 for(i in 1:length(x_hcts)){
   mydata = Complete_Leg_data
@@ -141,7 +141,6 @@ Now we compute the corresponding counterfactual probabilities of death for the d
 ```{r }
 overall_median_mortalityGAM = median(100*predict(mod_full_GAM, type='response'))
 par(las=1, bty='n')
-x_hcts = seq(4,45, by=1)
 probs_gam = array(dim = c(3, length(x_hcts)))
 for(i in 1:length(x_hcts)){
   mydata = Complete_Leg_data
@@ -153,13 +152,24 @@ for(i in 1:length(x_hcts)){
 
 We see that the effect of haematocrit on mortality is non-linear under this model: below 20 is protective, above 20 plateaus out:
 
-```{r counterfactualMortality_GAM}
-par(las=1, bty='n')
+```{r counterfactualPlots}
+#
+par(las=1, mfrow=c(1,2), bty='n', mar=c(4,4,1,1))
+
+
+plot(x_hcts,probs_lin[2,], xlim=c(4,45), ylab='Predicted probability of death', 
+     xlab='Haematocrit (%)', ylim=c(0,25), lty=1, lwd=3, type='l')
+lines(x_hcts, probs_lin[1,], lty=2, lwd=2)
+lines(x_hcts, probs_lin[3,], lty=2, lwd=2)
+abline(h=overall_median_mortality, lwd=3, col='blue',lty=2)
+title('Logistic regression model')
+### And now the GAM model
 plot(x_hcts,probs_gam[2,], xlim=c(4,45), ylab='Predicted probability of death', 
-     xlab='Haematocrit (%)', ylim=c(0,20), lty=1, lwd=3, type='l')
+     xlab='Haematocrit (%)', ylim=c(0,25), lty=1, lwd=3, type='l')
 lines(x_hcts, probs_gam[1,], lty=2, lwd=2)
 lines(x_hcts, probs_gam[3,], lty=2, lwd=2)
 abline(h=overall_median_mortalityGAM, lwd=3, col='blue',lty=2)
+title('Generalised additive model')
 #legend('bottomright', col=c('black','black','blue'), lwd=3, lty=c(1,2,2),
 #       legend = c('Mean predicted mortality', '80% predicted interval','Observed #mortality'))
 ```
