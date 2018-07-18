@@ -1,5 +1,5 @@
 ---
-title: "Charactersing independent predictors in severe malaria"
+title: "Charactersing effect of anaemia on mortality in severe malaria"
 output: html_notebook
 ---
 
@@ -30,11 +30,11 @@ Let's look at the key predictive variables. We use a random effects term to mode
 par(las=1)
 ## Base Excess and HCT
 plot(jitter(Leg_data$HCT,amount=1), jitter(Leg_data$BD), 
-     col=Leg_data$studyID, pch='*', xlab='Haematocrit', ylab='Base Excess')
+     col=Leg_data$studyID, pch='*', xlab='Haematocrit', ylab='Base Deficit')
 legend('topright', col=unique(Leg_data$studyID), legend = unique(Leg_data$studyID), pch='*')
 mod = lmer(formula = BD ~ HCT + (1 | studyID), data = Leg_data)
-ys = predict(object = mod, newdata = data.frame(HCT=6:50, studyID=NA), re.form=NA)
-lines(6:50, ys, lwd=3, col='black')
+ys = predict(object = mod, newdata = data.frame(HCT=8:50, studyID=NA), re.form=NA)
+lines(8:50, ys, lwd=3, col='black')
 ```
 
 ```{r LPAR_HCT}
@@ -44,19 +44,19 @@ plot(jitter(Leg_data$HCT,amount=1), Leg_data$LPAR,
      col=Leg_data$studyID, pch='*', xlab='Haematocrit', ylab='Log10 Parasitaemia')
 legend('topright', col=unique(Leg_data$studyID), legend = unique(Leg_data$studyID), pch='*')
 mod = lmer(formula = LPAR ~ HCT + (1 | studyID), data = Leg_data)
-ys = predict(object = mod, newdata = data.frame(HCT=6:50, studyID=NA), re.form=NA)
-lines(6:50, ys, lwd=3, col='black')
+ys = predict(object = mod, newdata = data.frame(HCT=8:50, studyID=NA), re.form=NA)
+lines(8:50, ys, lwd=3, col='black')
 ```
 
 ```{r BUN_BD}
 par(las=1)
 ## 
-plot(jitter(Leg_data$BUN,amount=1), jitter(Leg_data$BD), 
+plot(jitter(Leg_data$BUN,amount=1), jitter(Leg_data$BD), xlim=c(0,140),
      col=Leg_data$studyID, pch='*', xlab='Blood Urea Nitrogen', ylab='Base Deficit')
 legend('topright', col=unique(Leg_data$studyID), legend = unique(Leg_data$studyID), pch='*')
 mod = lmer(formula = BD ~ BUN + (1 | studyID), data = Leg_data)
-ys = predict(object = mod, newdata = data.frame(BUN=5:75, studyID=NA), re.form=NA)
-lines(5:75, ys, lwd=3, col='black')
+ys = predict(object = mod, newdata = data.frame(BUN=5:140, studyID=NA), re.form=NA)
+lines(5:140, ys, lwd=3, col='black')
 ```
 
 
@@ -67,8 +67,8 @@ plot(jitter(Leg_data$AgeInYear,amount=1), Leg_data$HCT,
      col=Leg_data$studyID, pch='*', xlab='Age in years', ylab='Haematocrit')
 legend('topright', col=unique(Leg_data$studyID), legend = unique(Leg_data$studyID), pch='*')
 mod = lmer(formula = HCT ~ AgeInYear + (1 | studyID), data = Leg_data)
-ys = predict(object = mod, newdata = data.frame(AgeInYear=0:50, studyID=NA), re.form=NA)
-lines(0:50, ys, lwd=3, col='black')
+ys = predict(object = mod, newdata = data.frame(AgeInYear=0:80, studyID=NA), re.form=NA)
+lines(0:80, ys, lwd=3, col='black')
 ```
 
 
