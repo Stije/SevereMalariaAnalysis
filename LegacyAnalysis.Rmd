@@ -79,7 +79,7 @@ Leg_data$BUN[missing_BUN & Available_cr] = predict(mod_impute3,newdata=Leg_data[
 Resulting data we can now use:
 The contributions of the different studies:
 ```{r}
-vars_interest = c('outcome','HCT','LPAR_pct','BD','BUN','AgeInYear','drug_class')
+vars_interest = c('outcome','HCT','LPAR_pct','BD','BUN','poedema','convulsions','coma','AgeInYear','drug_class')
 complete_cases = apply(Leg_data[,vars_interest], 1, function(x) sum(is.na(x))) == 0
 Complete_Leg_data = Leg_data[complete_cases,] # for the model fitting
 Complete_Leg_data$studyID = as.factor(as.character(Complete_Leg_data$studyID))
@@ -116,7 +116,7 @@ mod = lmer(formula = LPAR_pct ~ HCT + (1 | studyID), data = Complete_Leg_data)
 ys = predict(object = mod, newdata = data.frame(HCT=8:50, studyID=NA), re.form=NA)
 lines(8:50, ys, lwd=3, col='black')
 ## BUN and BD
-plot(jitter(Leg_data$BUN,amount=1), jitter(Leg_data$BD), xlim=c(0,140),
+plot(jitter(Leg_data$BUN,amount=1), jitter(Leg_data$BD), 
      col=Leg_data$studyID, pch='*', xlab='Blood Urea Nitrogen', ylab='Base Deficit')
 #legend('topright', col=unique(Leg_data$studyID), legend = unique(Leg_data$studyID), pch='*')
 mod = lmer(formula = BD ~ BUN + (1 | studyID), data = Complete_Leg_data)
@@ -139,7 +139,8 @@ lines(0:80, ys, lwd=3, col='black')
 Before fitting the more complex GAM models we explore the standard glm (logistic regression) models.
 
 ```{r deathmodel_glm}
-mod_full = glmer(outcome ~ HCT + LPAR_pct + AgeInYear + BUN + BD + drug_AS + (1 | studyID),
+mod_full = glmer(outcome ~ HCT + LPAR_pct + AgeInYear + coma + convulsions +
+                   poedema + BUN + BD + drug_AS + (1 | studyID),
                data=Complete_Leg_data, family=binomial)
 summary(mod_full)
 ```
@@ -182,7 +183,8 @@ The GAM model allows for non-linear relationships between certain variables and 
 Here we fit as non-linear the effect of age and haematocrit on mortality.
 
 ```{r deathmodel_GAM}
-mod_full_GAM = gam(outcome ~ s(HCT,AgeInYear) + LPAR_pct + BUN + BD,
+mod_full_GAM = gam(outcome ~ s(HCT,AgeInYear) + LPAR_pct  + coma + convulsions +
+                   poedema + BUN + BD + drug_AS,
                data=Complete_Leg_data, family=binomial)
 summary(mod_full_GAM)
 ```
@@ -209,18 +211,16 @@ We see that the effect of haematocrit on mortality is non-linear under this mode
 par(las=1, mfrow=c(1,2), bty='n', mar=c(4,4,1,1))
 ### Plot the standard logistic regression model
 plot(x_hcts,probs_lin[2,], xlim=c(4,45), ylab='Predicted probability of death', 
-     xlab='Haematocrit (%)', ylim=c(0,25), lty=1, lwd=3, type='l')
+     xlab='Haematocrit (%)', ylim=c(0,20), lty=1, lwd=3, type='l')
 lines(x_hcts, probs_lin[1,], lty=2, lwd=2)
 lines(x_hcts, probs_lin[3,], lty=2, lwd=2)
 abline(h=overall_median_mortality, lwd=3, col='blue',lty=2)
 title('Logistic regression model')
 ### And now the GAM model
 plot(x_hcts,probs_gam[2,], xlim=c(4,45), ylab='Predicted probability of death', 
-     xlab='Haematocrit (%)', ylim=c(0,25), lty=1, lwd=3, type='l')
+     xlab='Haematocrit (%)', ylim=c(0,20), lty=1, lwd=3, type='l')
 lines(x_hcts, probs_gam[1,], lty=2, lwd=2)
 lines(x_hcts, probs_gam[3,], lty=2, lwd=2)
 abline(h=overall_median_mortalityGAM, lwd=3, col='blue',lty=2)
 title('Generalised additive model')
-#legend('bottomright', col=c('black','black','blue'), lwd=3, lty=c(1,2,2),
-#       legend = c('Mean predicted mortality', '80% predicted interval','Observed #mortality'))
 ```

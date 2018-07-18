@@ -249,7 +249,7 @@ studies:
 
 \begin{Shaded}
 \begin{Highlighting}[]
-\NormalTok{vars_interest =}\StringTok{ }\KeywordTok{c}\NormalTok{(}\StringTok{'outcome'}\NormalTok{,}\StringTok{'HCT'}\NormalTok{,}\StringTok{'LPAR_pct'}\NormalTok{,}\StringTok{'BD'}\NormalTok{,}\StringTok{'BUN'}\NormalTok{,}\StringTok{'AgeInYear'}\NormalTok{,}\StringTok{'drug_class'}\NormalTok{)}
+\NormalTok{vars_interest =}\StringTok{ }\KeywordTok{c}\NormalTok{(}\StringTok{'outcome'}\NormalTok{,}\StringTok{'HCT'}\NormalTok{,}\StringTok{'LPAR_pct'}\NormalTok{,}\StringTok{'BD'}\NormalTok{,}\StringTok{'BUN'}\NormalTok{,}\StringTok{'poedema'}\NormalTok{,}\StringTok{'convulsions'}\NormalTok{,}\StringTok{'coma'}\NormalTok{,}\StringTok{'AgeInYear'}\NormalTok{,}\StringTok{'drug_class'}\NormalTok{)}
 \NormalTok{complete_cases =}\StringTok{ }\KeywordTok{apply}\NormalTok{(Leg_data[,vars_interest], }\DecValTok{1}\NormalTok{, }\ControlFlowTok{function}\NormalTok{(x) }\KeywordTok{sum}\NormalTok{(}\KeywordTok{is.na}\NormalTok{(x))) }\OperatorTok{==}\StringTok{ }\DecValTok{0}
 \NormalTok{Complete_Leg_data =}\StringTok{ }\NormalTok{Leg_data[complete_cases,] }\CommentTok{# for the model fitting}
 \NormalTok{Complete_Leg_data}\OperatorTok{$}\NormalTok{studyID =}\StringTok{ }\KeywordTok{as.factor}\NormalTok{(}\KeywordTok{as.character}\NormalTok{(Complete_Leg_data}\OperatorTok{$}\NormalTok{studyID))}
@@ -276,7 +276,7 @@ studies:
 \begin{verbatim}
 ## 
 ##          AAV           AQ     AQGambia      AQUAMAT Core Malaria 
-##          215          357          168         3667          669 
+##          213          150          168         3666          639 
 ##    SEAQUAMAT 
 ##         1333
 \end{verbatim}
@@ -306,16 +306,11 @@ Before fitting the more complex GAM models we explore the standard glm
 
 \begin{Shaded}
 \begin{Highlighting}[]
-\NormalTok{mod_full =}\StringTok{ }\KeywordTok{glmer}\NormalTok{(outcome }\OperatorTok{~}\StringTok{ }\NormalTok{HCT }\OperatorTok{+}\StringTok{ }\NormalTok{LPAR_pct }\OperatorTok{+}\StringTok{ }\NormalTok{AgeInYear }\OperatorTok{+}\StringTok{ }\NormalTok{BUN }\OperatorTok{+}\StringTok{ }\NormalTok{BD }\OperatorTok{+}\StringTok{ }\NormalTok{drug_AS }\OperatorTok{+}\StringTok{ }\NormalTok{(}\DecValTok{1} \OperatorTok{|}\StringTok{ }\NormalTok{studyID),}
+\NormalTok{mod_full =}\StringTok{ }\KeywordTok{glmer}\NormalTok{(outcome }\OperatorTok{~}\StringTok{ }\NormalTok{HCT }\OperatorTok{+}\StringTok{ }\NormalTok{LPAR_pct }\OperatorTok{+}\StringTok{ }\NormalTok{AgeInYear }\OperatorTok{+}\StringTok{ }\NormalTok{coma }\OperatorTok{+}\StringTok{ }\NormalTok{convulsions }\OperatorTok{+}
+\StringTok{                   }\NormalTok{poedema }\OperatorTok{+}\StringTok{ }\NormalTok{BUN }\OperatorTok{+}\StringTok{ }\NormalTok{BD }\OperatorTok{+}\StringTok{ }\NormalTok{drug_AS }\OperatorTok{+}\StringTok{ }\NormalTok{(}\DecValTok{1} \OperatorTok{|}\StringTok{ }\NormalTok{studyID),}
                \DataTypeTok{data=}\NormalTok{Complete_Leg_data, }\DataTypeTok{family=}\NormalTok{binomial)}
 \end{Highlighting}
 \end{Shaded}
-
-\begin{verbatim}
-## Warning in checkConv(attr(opt, "derivs"), opt$par, ctrl = control
-## $checkConv, : Model failed to converge with max|grad| = 0.00261273 (tol =
-## 0.001, component 1)
-\end{verbatim}
 
 \begin{verbatim}
 ## Warning in checkConv(attr(opt, "derivs"), opt$par, ctrl = control$checkConv, : Model is nearly unidentifiable: very large eigenvalue
@@ -332,44 +327,50 @@ Before fitting the more complex GAM models we explore the standard glm
 ## Generalized linear mixed model fit by maximum likelihood (Laplace
 ##   Approximation) [glmerMod]
 ##  Family: binomial  ( logit )
-## Formula: outcome ~ HCT + LPAR_pct + AgeInYear + BUN + BD + drug_AS + (1 |  
-##     studyID)
+## Formula: 
+## outcome ~ HCT + LPAR_pct + AgeInYear + coma + convulsions + poedema +  
+##     BUN + BD + drug_AS + (1 | studyID)
 ##    Data: Complete_Leg_data
 ## 
 ##      AIC      BIC   logLik deviance df.resid 
-##   4055.0   4109.0  -2019.5   4039.0     6329 
+##   3550.0   3623.9  -1764.0   3528.0     6086 
 ## 
 ## Scaled residuals: 
 ##     Min      1Q  Median      3Q     Max 
-## -5.3857 -0.3710 -0.2501 -0.1668 10.4468 
+## -5.7815 -0.3459 -0.2035 -0.1263 11.0067 
 ## 
 ## Random effects:
 ##  Groups  Name        Variance Std.Dev.
-##  studyID (Intercept) 0.01961  0.14    
-## Number of obs: 6337, groups:  studyID, 6
+##  studyID (Intercept) 0.02104  0.1451  
+## Number of obs: 6097, groups:  studyID, 6
 ## 
 ## Fixed effects:
-##              Estimate Std. Error z value Pr(>|z|)    
-## (Intercept) -4.299889   0.201160 -21.376  < 2e-16 ***
-## HCT          0.023103   0.004787   4.826 1.39e-06 ***
-## LPAR_pct    -0.009963   0.056027  -0.178    0.859    
-## AgeInYear    0.019548   0.003473   5.628 1.82e-08 ***
-## BUN          0.013545   0.001445   9.377  < 2e-16 ***
-## BD           0.137028   0.006703  20.442  < 2e-16 ***
-## drug_AS     -0.343092   0.083300  -4.119 3.81e-05 ***
+##               Estimate Std. Error z value Pr(>|z|)    
+## (Intercept)  -4.948185   0.213543 -23.172  < 2e-16 ***
+## HCT           0.014758   0.005204   2.836 0.004571 ** 
+## LPAR_pct      0.055263   0.060015   0.921 0.357144    
+## AgeInYear     0.019206   0.003808   5.044 4.56e-07 ***
+## coma          1.413142   0.097127  14.549  < 2e-16 ***
+## convulsions1  0.466693   0.111460   4.187 2.83e-05 ***
+## poedema1      0.778130   0.371496   2.095 0.036208 *  
+## BUN           0.013336   0.001544   8.637  < 2e-16 ***
+## BD            0.129810   0.007001  18.543  < 2e-16 ***
+## drug_AS      -0.322689   0.089086  -3.622 0.000292 ***
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
 ## Correlation of Fixed Effects:
-##           (Intr) HCT    LPAR_p AgInYr BUN    BD    
-## HCT       -0.716                                   
-## LPAR_pct  -0.096  0.017                            
-## AgeInYear -0.305 -0.107 -0.028                     
-## BUN       -0.279  0.127 -0.037 -0.132              
-## BD        -0.404  0.226 -0.165  0.115 -0.211       
-## drug_AS   -0.150 -0.015 -0.026 -0.075 -0.056 -0.010
+##             (Intr) HCT    LPAR_p AgInYr coma   cnvls1 poedm1 BUN    BD    
+## HCT         -0.661                                                        
+## LPAR_pct    -0.100  0.011                                                 
+## AgeInYear   -0.250 -0.117 -0.057                                          
+## coma        -0.246 -0.064  0.062 -0.068                                   
+## convulsins1 -0.051 -0.075  0.035  0.101 -0.245                            
+## poedema1    -0.013 -0.004 -0.004 -0.086  0.012  0.005                     
+## BUN         -0.229  0.109 -0.055 -0.154  0.005  0.048 -0.020              
+## BD          -0.428  0.223 -0.170  0.159  0.001  0.065  0.022 -0.207       
+## drug_AS     -0.167 -0.009 -0.017 -0.069 -0.006  0.001 -0.023 -0.049 -0.013
 ## convergence code: 0
-## Model failed to converge with max|grad| = 0.00261273 (tol = 0.001, component 1)
 ## Model is nearly unidentifiable: very large eigenvalue
 ##  - Rescale variables?
 \end{verbatim}
@@ -424,7 +425,8 @@ mortality.
 
 \begin{Shaded}
 \begin{Highlighting}[]
-\NormalTok{mod_full_GAM =}\StringTok{ }\KeywordTok{gam}\NormalTok{(outcome }\OperatorTok{~}\StringTok{ }\KeywordTok{s}\NormalTok{(HCT,AgeInYear) }\OperatorTok{+}\StringTok{ }\NormalTok{LPAR_pct }\OperatorTok{+}\StringTok{ }\NormalTok{BUN }\OperatorTok{+}\StringTok{ }\NormalTok{BD,}
+\NormalTok{mod_full_GAM =}\StringTok{ }\KeywordTok{gam}\NormalTok{(outcome }\OperatorTok{~}\StringTok{ }\KeywordTok{s}\NormalTok{(HCT,AgeInYear) }\OperatorTok{+}\StringTok{ }\NormalTok{LPAR_pct  }\OperatorTok{+}\StringTok{ }\NormalTok{coma }\OperatorTok{+}\StringTok{ }\NormalTok{convulsions }\OperatorTok{+}
+\StringTok{                   }\NormalTok{poedema }\OperatorTok{+}\StringTok{ }\NormalTok{BUN }\OperatorTok{+}\StringTok{ }\NormalTok{BD }\OperatorTok{+}\StringTok{ }\NormalTok{drug_AS,}
                \DataTypeTok{data=}\NormalTok{Complete_Leg_data, }\DataTypeTok{family=}\NormalTok{binomial)}
 \KeywordTok{summary}\NormalTok{(mod_full_GAM)}
 \end{Highlighting}
@@ -436,25 +438,30 @@ mortality.
 ## Link function: logit 
 ## 
 ## Formula:
-## outcome ~ s(HCT, AgeInYear) + LPAR_pct + BUN + BD
+## outcome ~ s(HCT, AgeInYear) + LPAR_pct + coma + convulsions + 
+##     poedema + BUN + BD + drug_AS
 ## 
 ## Parametric coefficients:
-##              Estimate Std. Error z value Pr(>|z|)    
-## (Intercept) -3.698517   0.093454 -39.576   <2e-16 ***
-## LPAR_pct    -0.017952   0.054425  -0.330    0.742    
-## BUN          0.011993   0.001433   8.371   <2e-16 ***
-## BD           0.143227   0.006868  20.856   <2e-16 ***
+##               Estimate Std. Error z value Pr(>|z|)    
+## (Intercept)  -4.366081   0.125023 -34.922  < 2e-16 ***
+## LPAR_pct      0.051699   0.058816   0.879 0.379400    
+## coma          1.390986   0.096050  14.482  < 2e-16 ***
+## convulsions1  0.511948   0.111127   4.607 4.09e-06 ***
+## poedema1      0.738046   0.362458   2.036 0.041728 *  
+## BUN           0.012307   0.001564   7.870 3.54e-15 ***
+## BD            0.134255   0.007255  18.505  < 2e-16 ***
+## drug_AS      -0.334316   0.088449  -3.780 0.000157 ***
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
 ## Approximate significance of smooth terms:
-##                  edf Ref.df Chi.sq p-value    
-## s(HCT,AgeInYear) 6.4  8.943  153.9  <2e-16 ***
+##                    edf Ref.df Chi.sq p-value    
+## s(HCT,AgeInYear) 7.006  9.781    102  <2e-16 ***
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
-## R-sq.(adj) =  0.184   Deviance explained = 19.3%
-## UBRE = -0.36036  Scale est. = 1         n = 6337
+## R-sq.(adj) =   0.25   Deviance explained = 26.5%
+## UBRE = -0.4204  Scale est. = 1         n = 6097
 \end{verbatim}
 
 Now we compute the corresponding counterfactual probabilities of death
@@ -483,14 +490,14 @@ this model: below 20 is protective, above 20 plateaus out:
 \KeywordTok{par}\NormalTok{(}\DataTypeTok{las=}\DecValTok{1}\NormalTok{, }\DataTypeTok{mfrow=}\KeywordTok{c}\NormalTok{(}\DecValTok{1}\NormalTok{,}\DecValTok{2}\NormalTok{), }\DataTypeTok{bty=}\StringTok{'n'}\NormalTok{, }\DataTypeTok{mar=}\KeywordTok{c}\NormalTok{(}\DecValTok{4}\NormalTok{,}\DecValTok{4}\NormalTok{,}\DecValTok{1}\NormalTok{,}\DecValTok{1}\NormalTok{))}
 \NormalTok{### Plot the standard logistic regression model}
 \KeywordTok{plot}\NormalTok{(x_hcts,probs_lin[}\DecValTok{2}\NormalTok{,], }\DataTypeTok{xlim=}\KeywordTok{c}\NormalTok{(}\DecValTok{4}\NormalTok{,}\DecValTok{45}\NormalTok{), }\DataTypeTok{ylab=}\StringTok{'Predicted probability of death'}\NormalTok{, }
-     \DataTypeTok{xlab=}\StringTok{'Haematocrit (%)'}\NormalTok{, }\DataTypeTok{ylim=}\KeywordTok{c}\NormalTok{(}\DecValTok{0}\NormalTok{,}\DecValTok{25}\NormalTok{), }\DataTypeTok{lty=}\DecValTok{1}\NormalTok{, }\DataTypeTok{lwd=}\DecValTok{3}\NormalTok{, }\DataTypeTok{type=}\StringTok{'l'}\NormalTok{)}
+     \DataTypeTok{xlab=}\StringTok{'Haematocrit (%)'}\NormalTok{, }\DataTypeTok{ylim=}\KeywordTok{c}\NormalTok{(}\DecValTok{0}\NormalTok{,}\DecValTok{20}\NormalTok{), }\DataTypeTok{lty=}\DecValTok{1}\NormalTok{, }\DataTypeTok{lwd=}\DecValTok{3}\NormalTok{, }\DataTypeTok{type=}\StringTok{'l'}\NormalTok{)}
 \KeywordTok{lines}\NormalTok{(x_hcts, probs_lin[}\DecValTok{1}\NormalTok{,], }\DataTypeTok{lty=}\DecValTok{2}\NormalTok{, }\DataTypeTok{lwd=}\DecValTok{2}\NormalTok{)}
 \KeywordTok{lines}\NormalTok{(x_hcts, probs_lin[}\DecValTok{3}\NormalTok{,], }\DataTypeTok{lty=}\DecValTok{2}\NormalTok{, }\DataTypeTok{lwd=}\DecValTok{2}\NormalTok{)}
 \KeywordTok{abline}\NormalTok{(}\DataTypeTok{h=}\NormalTok{overall_median_mortality, }\DataTypeTok{lwd=}\DecValTok{3}\NormalTok{, }\DataTypeTok{col=}\StringTok{'blue'}\NormalTok{,}\DataTypeTok{lty=}\DecValTok{2}\NormalTok{)}
 \KeywordTok{title}\NormalTok{(}\StringTok{'Logistic regression model'}\NormalTok{)}
 \NormalTok{### And now the GAM model}
 \KeywordTok{plot}\NormalTok{(x_hcts,probs_gam[}\DecValTok{2}\NormalTok{,], }\DataTypeTok{xlim=}\KeywordTok{c}\NormalTok{(}\DecValTok{4}\NormalTok{,}\DecValTok{45}\NormalTok{), }\DataTypeTok{ylab=}\StringTok{'Predicted probability of death'}\NormalTok{, }
-     \DataTypeTok{xlab=}\StringTok{'Haematocrit (%)'}\NormalTok{, }\DataTypeTok{ylim=}\KeywordTok{c}\NormalTok{(}\DecValTok{0}\NormalTok{,}\DecValTok{25}\NormalTok{), }\DataTypeTok{lty=}\DecValTok{1}\NormalTok{, }\DataTypeTok{lwd=}\DecValTok{3}\NormalTok{, }\DataTypeTok{type=}\StringTok{'l'}\NormalTok{)}
+     \DataTypeTok{xlab=}\StringTok{'Haematocrit (%)'}\NormalTok{, }\DataTypeTok{ylim=}\KeywordTok{c}\NormalTok{(}\DecValTok{0}\NormalTok{,}\DecValTok{20}\NormalTok{), }\DataTypeTok{lty=}\DecValTok{1}\NormalTok{, }\DataTypeTok{lwd=}\DecValTok{3}\NormalTok{, }\DataTypeTok{type=}\StringTok{'l'}\NormalTok{)}
 \KeywordTok{lines}\NormalTok{(x_hcts, probs_gam[}\DecValTok{1}\NormalTok{,], }\DataTypeTok{lty=}\DecValTok{2}\NormalTok{, }\DataTypeTok{lwd=}\DecValTok{2}\NormalTok{)}
 \KeywordTok{lines}\NormalTok{(x_hcts, probs_gam[}\DecValTok{3}\NormalTok{,], }\DataTypeTok{lty=}\DecValTok{2}\NormalTok{, }\DataTypeTok{lwd=}\DecValTok{2}\NormalTok{)}
 \KeywordTok{abline}\NormalTok{(}\DataTypeTok{h=}\NormalTok{overall_median_mortalityGAM, }\DataTypeTok{lwd=}\DecValTok{3}\NormalTok{, }\DataTypeTok{col=}\StringTok{'blue'}\NormalTok{,}\DataTypeTok{lty=}\DecValTok{2}\NormalTok{)}
@@ -499,13 +506,6 @@ this model: below 20 is protective, above 20 plateaus out:
 \end{Shaded}
 
 \includegraphics{LegacyAnalysis_files/figure-latex/counterfactualPlots-1.pdf}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{#legend('bottomright', col=c('black','black','blue'), lwd=3, lty=c(1,2,2),}
-\CommentTok{#       legend = c('Mean predicted mortality', '80% predicted interval','Observed #mortality'))}
-\end{Highlighting}
-\end{Shaded}
 
 
 \end{document}
