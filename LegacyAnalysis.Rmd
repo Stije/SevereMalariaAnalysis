@@ -83,47 +83,21 @@ mod_full = glmer(outcome ~ HCT + LPAR + AgeInYear + BUN + BD + (1 | studyID),
 summary(mod_full)
 ```
 
-Let's simulate all possible patients and compute their corresponding probability of death.
+Now let's make counterfactual predictions of anaemia on death for the patients in the database:
 
 ```{r}
-# Probably want to simulate from the marginals here...
-All_patients = expand.grid(HCT=seq(4,45,by=2), 
-                           BUN=seq(0,80,length.out = 5), 
-                           BD=seq(-4,25, length.out = 5), 
-                           SYS_BP_NUMERIC=0:1, 
-                           LPAR=3:7, 
-                           AgeInYear=c(1,2,3,4,5,10,20,50))
-All_patients$studyID = Leg_data$studyID[1]
-ys = 100*predict(mod_pars_0, newdata = All_patients, exclude="s(studyID)", type='response')
-hist(ys, xlab='Probability of death', freq=F, yaxt='n', ylab='', main='')
-abline(v=1, lwd=3, col='red')
-```
-
-We set a threshold mortality underneath which we term 'non-severe', above which is 'severe'.
-```{r}
-threshold = 1 # this is in percent
-SeverityLabel = array(NA, dim=length(ys))
-SeverityLabel[ys>threshold] = 1
-SeverityLabel[ys<= threshold] = 0
-All_patients$SeverityLabel = SeverityLabel
-rpart(SeverityLabel~ HCT + BUN + BD + LPAR, data = All_patients)
-```
-
-
-
-# Direct effect of anaemia on death
-
-
-```{r anaemiaEffect}
 par(las=1)
-plot(NA,NA, xlim=c(4,45), ylim=c(0,40),ylab='mortality', xlab='Haematocrit')
+plot(NA,NA, xlim=c(4,45), ylim=c(0,40),ylab='% predicted mortality', xlab='Haematocrit')
+title('Countrerfactual predictions: Overall mortality')
 for(HCT in 4:45){
   mydata = Leg_data
   mydata$HCT=HCT
-  ys = 100*predict(mod_full, newdata = mydata, exclude="s(studyID)", type='response')
+  ys = 100*predict(mod_full, newdata = mydata, re.form=NA, type='response')
   
   points(HCT,mean(ys), pch=18)
   points(rep(HCT,2), quantile(ys, probs=c(0.1,0.9)), pch='-', col='red')
 }
+abline(h=10, lwd=3, col='blue')
 ```
+
 
