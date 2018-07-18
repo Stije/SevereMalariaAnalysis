@@ -15,7 +15,8 @@ This looks at the severe malaria legacy dataset from MORU
 ```{r, echo=FALSE}
 load('RData/Data.R')
 complete_cases = apply(m, 1, function(x) sum(is.na(x))) == 0
-Leg_data = m[complete_cases,]
+Leg_data = m[,]  # for the plotting
+Complete_Leg_data = m[complete_cases,] # for the model fitting
 ```
 
 
@@ -73,27 +74,31 @@ Before fitting the more complex GAM models we explore the standard glm (logistic
 
 ```{r deathmodel_glm}
 mod_full = glmer(outcome ~ HCT + LPAR + AgeInYear + BUN + BD + (1 | studyID),
-               data=Leg_data, family=binomial)
+               data=Complete_Leg_data, family=binomial)
 summary(mod_full)
 ```
 
-Now let's make counterfactual predictions of anaemia on death for the patients in the database:
+Now let's make counterfactual predictions of anaemia on death for the patients in the database.
+The way to interpret this `counterfactual' plot is as follows: suppose that every individual in the dataset was assigned (as in a intervention) a specific haematocrit $X$, what would the resulting per patient probability of death be. Here we summarise these probabilities by the predicted mean probability of death and 80\% predictive intervals.
 
 ```{r counterfactualMortality}
 overall_mortality = 100*mean(Leg_data$outcome)
 par(las=1, bty='n')
-plot(NA,NA, xlim=c(4,45), ylim=c(0,50),ylab='% predicted mortality', xlab='Haematocrit (%)')
-title('Counterfactual predictions of mortality')
-for(HCT in 4:45){
-  mydata = Leg_data
-  mydata$HCT=HCT
+x_hcts = seq(4,45, by=.5)
+probs = array(dim = c(3, length(x_hcts)))
+for(i in 1:length(x_hcts)){
+  mydata = Complete_Leg_data
+  mydata$HCT=x_hcts[i]
   ys = 100*predict(mod_full, newdata = mydata, re.form=NA, type='response')
-  
-  points(HCT,mean(ys), pch=18)
-  points(rep(HCT,2), quantile(ys, probs=c(0.1,0.9)), pch='-', col='red')
+  probs[2,i] = mean(ys)
+  probs[c(1,3),i] = quantile(ys, probs=c(0.1,0.9))
 }
-abline(h=overall_mortality, lwd=3, col='blue',lty=3)
-legend('topleft', col=c('black','red','blue'), lwd=3, lty=c(NA,3,3),pch = c(18,NA,NA),
+plot(x_hcts,probs[2,], xlim=c(4,45), ylab='Predicted probability of death', 
+     xlab='Haematocrit (%)', ylim=c(0,50), lty=1, lwd=3, type='l')
+lines(x_hcts, probs[1,], lty=2, lwd=2)
+lines(x_hcts, probs[3,], lty=2, lwd=2)
+abline(h=overall_mortality, lwd=3, col='blue',lty=2)
+legend('topleft', col=c('black','black','blue'), lwd=3, lty=c(1,2,2),
        legend = c('Mean predicted mortality', '80% predicted interval','Observed mortality'))
 ```
 
