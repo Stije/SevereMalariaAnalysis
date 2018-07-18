@@ -333,43 +333,43 @@ Before fitting the more complex GAM models we explore the standard glm
 ##    Data: Complete_Leg_data
 ## 
 ##      AIC      BIC   logLik deviance df.resid 
-##   3550.0   3623.9  -1764.0   3528.0     6086 
+##   3544.7   3618.6  -1761.4   3522.7     6086 
 ## 
 ## Scaled residuals: 
 ##     Min      1Q  Median      3Q     Max 
-## -5.7815 -0.3459 -0.2035 -0.1263 11.0067 
+## -5.9680 -0.3455 -0.2028 -0.1256 11.1231 
 ## 
 ## Random effects:
 ##  Groups  Name        Variance Std.Dev.
-##  studyID (Intercept) 0.02104  0.1451  
+##  studyID (Intercept) 0.01816  0.1347  
 ## Number of obs: 6097, groups:  studyID, 6
 ## 
 ## Fixed effects:
 ##               Estimate Std. Error z value Pr(>|z|)    
-## (Intercept)  -4.948185   0.213543 -23.172  < 2e-16 ***
-## HCT           0.014758   0.005204   2.836 0.004571 ** 
-## LPAR_pct      0.055263   0.060015   0.921 0.357144    
-## AgeInYear     0.019206   0.003808   5.044 4.56e-07 ***
-## coma          1.413142   0.097127  14.549  < 2e-16 ***
-## convulsions1  0.466693   0.111460   4.187 2.83e-05 ***
-## poedema1      0.778130   0.371496   2.095 0.036208 *  
-## BUN           0.013336   0.001544   8.637  < 2e-16 ***
-## BD            0.129810   0.007001  18.543  < 2e-16 ***
-## drug_AS      -0.322689   0.089086  -3.622 0.000292 ***
+## (Intercept)  -4.974463   0.212231 -23.439  < 2e-16 ***
+## HCT           0.015164   0.005220   2.905 0.003673 ** 
+## LPAR_pct      0.050297   0.059974   0.839 0.401669    
+## AgeInYear     0.018937   0.003815   4.963 6.92e-07 ***
+## coma          1.413238   0.097151  14.547  < 2e-16 ***
+## convulsions1  0.469218   0.111356   4.214 2.51e-05 ***
+## poedema1      0.771794   0.371709   2.076 0.037863 *  
+## BUN           0.014147   0.001574   8.985  < 2e-16 ***
+## BD            0.129146   0.007000  18.449  < 2e-16 ***
+## drug_AS      -0.324270   0.089117  -3.639 0.000274 ***
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
 ## Correlation of Fixed Effects:
 ##             (Intr) HCT    LPAR_p AgInYr coma   cnvls1 poedm1 BUN    BD    
-## HCT         -0.661                                                        
-## LPAR_pct    -0.100  0.011                                                 
-## AgeInYear   -0.250 -0.117 -0.057                                          
-## coma        -0.246 -0.064  0.062 -0.068                                   
-## convulsins1 -0.051 -0.075  0.035  0.101 -0.245                            
-## poedema1    -0.013 -0.004 -0.004 -0.086  0.012  0.005                     
-## BUN         -0.229  0.109 -0.055 -0.154  0.005  0.048 -0.020              
-## BD          -0.428  0.223 -0.170  0.159  0.001  0.065  0.022 -0.207       
-## drug_AS     -0.167 -0.009 -0.017 -0.069 -0.006  0.001 -0.023 -0.049 -0.013
+## HCT         -0.667                                                        
+## LPAR_pct    -0.096  0.008                                                 
+## AgeInYear   -0.246 -0.114 -0.060                                          
+## coma        -0.244 -0.066  0.062 -0.073                                   
+## convulsins1 -0.054 -0.075  0.036  0.102 -0.243                            
+## poedema1    -0.010 -0.005 -0.005 -0.089  0.012  0.006                     
+## BUN         -0.238  0.116 -0.059 -0.155  0.006  0.048 -0.021              
+## BD          -0.435  0.223 -0.170  0.164  0.001  0.062  0.022 -0.204       
+## drug_AS     -0.165 -0.011 -0.017 -0.072 -0.005  0.001 -0.024 -0.052 -0.013
 ## convergence code: 0
 ## Model is nearly unidentifiable: very large eigenvalue
 ##  - Rescale variables?
@@ -443,25 +443,25 @@ mortality.
 ## 
 ## Parametric coefficients:
 ##               Estimate Std. Error z value Pr(>|z|)    
-## (Intercept)  -4.366081   0.125023 -34.922  < 2e-16 ***
-## LPAR_pct      0.051699   0.058816   0.879 0.379400    
-## coma          1.390986   0.096050  14.482  < 2e-16 ***
-## convulsions1  0.511948   0.111127   4.607 4.09e-06 ***
-## poedema1      0.738046   0.362458   2.036 0.041728 *  
-## BUN           0.012307   0.001564   7.870 3.54e-15 ***
-## BD            0.134255   0.007255  18.505  < 2e-16 ***
-## drug_AS      -0.334316   0.088449  -3.780 0.000157 ***
+## (Intercept)  -4.382411   0.125428 -34.940  < 2e-16 ***
+## LPAR_pct      0.048145   0.058762   0.819 0.412598    
+## coma          1.393212   0.096148  14.490  < 2e-16 ***
+## convulsions1  0.514489   0.111133   4.629 3.67e-06 ***
+## poedema1      0.735753   0.363146   2.026 0.042759 *  
+## BUN           0.013112   0.001594   8.227  < 2e-16 ***
+## BD            0.133356   0.007259  18.371  < 2e-16 ***
+## drug_AS      -0.335189   0.088521  -3.787 0.000153 ***
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
 ## Approximate significance of smooth terms:
 ##                    edf Ref.df Chi.sq p-value    
-## s(HCT,AgeInYear) 7.006  9.781    102  <2e-16 ***
+## s(HCT,AgeInYear) 6.936  9.685  97.96  <2e-16 ***
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
-## R-sq.(adj) =   0.25   Deviance explained = 26.5%
-## UBRE = -0.4204  Scale est. = 1         n = 6097
+## R-sq.(adj) =  0.251   Deviance explained = 26.6%
+## UBRE = -0.4212  Scale est. = 1         n = 6097
 \end{verbatim}
 
 Now we compute the corresponding counterfactual probabilities of death

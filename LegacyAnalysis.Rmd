@@ -18,6 +18,7 @@ load('RData/Data.R')
 m$drug_class = as.factor(m$drug_class)
 rm_ind = is.na(m$outcome) | is.na(m$studyID)
 m = m[!rm_ind, ]
+m$BUN[m$BUN > 140] = 140
 Leg_data = m[,]  # for the plotting
 ```
 
