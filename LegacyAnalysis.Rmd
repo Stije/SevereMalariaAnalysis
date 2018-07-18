@@ -22,6 +22,7 @@ vars_interest = c('outcome','HCT','LPAR','BD','BUN','AgeInYear','drug')
 complete_cases = apply(m[,vars_interest], 1, function(x) sum(is.na(x))) == 0
 Leg_data = m[,]  # for the plotting
 Complete_Leg_data = m[complete_cases,] # for the model fitting
+Complete_Leg_data$studyID = as.factor(as.character(Complete_Leg_data$studyID))
 ```
 
 The contributions of the different studies:
@@ -92,27 +93,73 @@ summary(mod_full)
 ```
 
 Now let's make counterfactual predictions of anaemia on death for the patients in the database.
-The way to interpret this `counterfactual' plot is as follows: suppose that every individual in the dataset was assigned (as in a intervention) a specific haematocrit $X$, what would the resulting per patient probability of death be. Here we summarise these probabilities by the predicted mean probability of death and 80\% predictive intervals.
+
 
 ```{r counterfactualMortality}
-overall_mortality = 100*mean(Complete_Leg_data$outcome)
+myquantiles = c(0.25,0.5,0.75) # this is 50% predictive interval
+
+overall_median_mortality = median(100*predict(mod_full, type='response'))
 par(las=1, bty='n')
 x_hcts = seq(4,45, by=.5)
-probs = array(dim = c(3, length(x_hcts)))
+probs_lin = array(dim = c(3, length(x_hcts)))
 for(i in 1:length(x_hcts)){
   mydata = Complete_Leg_data
   mydata$HCT=x_hcts[i]
   ys = 100*predict(mod_full, newdata = mydata, re.form=NA, type='response')
-  probs[2,i] = mean(ys)
-  probs[c(1,3),i] = quantile(ys, probs=c(0.1,0.9))
+  probs_lin[,i] = quantile(ys, probs=myquantiles)
 }
-plot(x_hcts,probs[2,], xlim=c(4,45), ylab='Predicted probability of death', 
-     xlab='Haematocrit (%)', ylim=c(0,50), lty=1, lwd=3, type='l')
-lines(x_hcts, probs[1,], lty=2, lwd=2)
-lines(x_hcts, probs[3,], lty=2, lwd=2)
-abline(h=overall_mortality, lwd=3, col='blue',lty=2)
+```
+
+The way to interpret this `counterfactual' plot is as follows: suppose that every individual in the dataset was assigned (as in a intervention) a specific haematocrit $X$, what would the resulting per patient probability of death be. Here we summarise these probabilities by the predicted mean probability of death and 80\% predictive intervals.
+
+```{r}
+plot(x_hcts,probs_lin[2,], xlim=c(4,45), ylab='Predicted probability of death', 
+     xlab='Haematocrit (%)', ylim=c(0,30), lty=1, lwd=3, type='l')
+lines(x_hcts, probs_lin[1,], lty=2, lwd=2)
+lines(x_hcts, probs_lin[3,], lty=2, lwd=2)
+abline(h=overall_median_mortality, lwd=3, col='blue',lty=2)
 legend('topleft', col=c('black','black','blue'), lwd=3, lty=c(1,2,2),
-       legend = c('Mean predicted mortality', '80% predicted interval','Observed mortality'))
+       legend = c('Median counterfactual value', '25th and 75th counterfactual quantiles','Retrodicted median value'))
 ```
 
 
+## More complex GAM model
+
+The GAM model allows for non-linear relationships between certain variables and the outcome.
+
+Here we fit as non-linear the effect of age and haematocrit on mortality.
+
+```{r deathmodel_GAM}
+mod_full_GAM = gam(outcome ~ s(HCT,AgeInYear) + LPAR + BUN + BD,
+               data=Complete_Leg_data, family=binomial)
+summary(mod_full_GAM)
+```
+
+
+Now we compute the corresponding counterfactual probabilities of death for the dataset for all values of the haematocrit:
+
+```{r }
+overall_median_mortalityGAM = median(100*predict(mod_full_GAM, type='response'))
+par(las=1, bty='n')
+x_hcts = seq(4,45, by=1)
+probs_gam = array(dim = c(3, length(x_hcts)))
+for(i in 1:length(x_hcts)){
+  mydata = Complete_Leg_data
+  mydata$HCT=x_hcts[i]
+  ys = 100*predict(mod_full_GAM, newdata = mydata, re.form=NA, type='response')
+  probs_gam[,i] = quantile(ys, probs=myquantiles)
+}
+```
+
+We see that the effect of haematocrit on mortality is non-linear under this model: below 20 is protective, above 20 plateaus out:
+
+```{r counterfactualMortality_GAM}
+par(las=1, bty='n')
+plot(x_hcts,probs_gam[2,], xlim=c(4,45), ylab='Predicted probability of death', 
+     xlab='Haematocrit (%)', ylim=c(0,20), lty=1, lwd=3, type='l')
+lines(x_hcts, probs_gam[1,], lty=2, lwd=2)
+lines(x_hcts, probs_gam[3,], lty=2, lwd=2)
+abline(h=overall_median_mortalityGAM, lwd=3, col='blue',lty=2)
+#legend('bottomright', col=c('black','black','blue'), lwd=3, lty=c(1,2,2),
+#       legend = c('Mean predicted mortality', '80% predicted interval','Observed #mortality'))
+```

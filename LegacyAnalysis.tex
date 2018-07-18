@@ -158,10 +158,8 @@ The contributions of the different studies:
 
 \begin{verbatim}
 ## 
-##          AAV           AQ     AQGambia      AQUAMAT Core Malaria 
-##            0            0            0         3779          359 
-##    SEAQUAMAT 
-##         1090
+##      AQUAMAT Core Malaria    SEAQUAMAT 
+##         3779          359         1090
 \end{verbatim}
 
 \section{Exploratory analysis}\label{exploratory-analysis}
@@ -306,6 +304,86 @@ predictive intervals.
 \end{Shaded}
 
 \includegraphics{LegacyAnalysis_files/figure-latex/counterfactualMortality-1.pdf}
+
+\subsection{More complex GAM model}\label{more-complex-gam-model}
+
+The GAM model allows for non-linear relationships between certain
+variables and the outcome.
+
+Here we fit as non-linear the effect of age and haematocrit on
+mortality.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{mod_full_GAM =}\StringTok{ }\KeywordTok{gam}\NormalTok{(outcome }\OperatorTok{~}\StringTok{ }\KeywordTok{s}\NormalTok{(HCT,AgeInYear) }\OperatorTok{+}\StringTok{ }\NormalTok{LPAR }\OperatorTok{+}\StringTok{ }\NormalTok{BUN }\OperatorTok{+}\StringTok{ }\NormalTok{BD,}
+               \DataTypeTok{data=}\NormalTok{Complete_Leg_data, }\DataTypeTok{family=}\NormalTok{binomial)}
+\KeywordTok{summary}\NormalTok{(mod_full_GAM)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+## Family: binomial 
+## Link function: logit 
+## 
+## Formula:
+## outcome ~ s(HCT, AgeInYear) + LPAR + BUN + BD
+## 
+## Parametric coefficients:
+##              Estimate Std. Error z value Pr(>|z|)    
+## (Intercept) -3.706458   0.332187 -11.158  < 2e-16 ***
+## LPAR        -0.003305   0.067265  -0.049    0.961    
+## BUN          0.010038   0.001720   5.838 5.29e-09 ***
+## BD           0.140822   0.007133  19.742  < 2e-16 ***
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Approximate significance of smooth terms:
+##                    edf Ref.df Chi.sq p-value    
+## s(HCT,AgeInYear) 6.522   9.09  131.3  <2e-16 ***
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## R-sq.(adj) =  0.202   Deviance explained = 21.4%
+## UBRE = -0.38846  Scale est. = 1         n = 5228
+\end{verbatim}
+
+Now we compute the corresponding counterfactual probabilities of death
+for the dataset for all values of the haematocrit:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{overall_mortality =}\StringTok{ }\DecValTok{100}\OperatorTok{*}\KeywordTok{mean}\NormalTok{(Complete_Leg_data}\OperatorTok{$}\NormalTok{outcome)}
+\KeywordTok{par}\NormalTok{(}\DataTypeTok{las=}\DecValTok{1}\NormalTok{, }\DataTypeTok{bty=}\StringTok{'n'}\NormalTok{)}
+\NormalTok{x_hcts =}\StringTok{ }\KeywordTok{seq}\NormalTok{(}\DecValTok{4}\NormalTok{,}\DecValTok{45}\NormalTok{, }\DataTypeTok{by=}\NormalTok{.}\DecValTok{5}\NormalTok{)}
+\NormalTok{probs =}\StringTok{ }\KeywordTok{array}\NormalTok{(}\DataTypeTok{dim =} \KeywordTok{c}\NormalTok{(}\DecValTok{3}\NormalTok{, }\KeywordTok{length}\NormalTok{(x_hcts)))}
+\ControlFlowTok{for}\NormalTok{(i }\ControlFlowTok{in} \DecValTok{1}\OperatorTok{:}\KeywordTok{length}\NormalTok{(x_hcts))\{}
+\NormalTok{  mydata =}\StringTok{ }\NormalTok{Complete_Leg_data}
+\NormalTok{  mydata}\OperatorTok{$}\NormalTok{HCT=x_hcts[i]}
+\NormalTok{  ys =}\StringTok{ }\DecValTok{100}\OperatorTok{*}\KeywordTok{predict}\NormalTok{(mod_full_GAM, }\DataTypeTok{newdata =}\NormalTok{ mydata, }\DataTypeTok{re.form=}\OtherTok{NA}\NormalTok{, }\DataTypeTok{type=}\StringTok{'response'}\NormalTok{)}
+\NormalTok{  probs[}\DecValTok{2}\NormalTok{,i] =}\StringTok{ }\KeywordTok{mean}\NormalTok{(ys)}
+\NormalTok{  probs[}\KeywordTok{c}\NormalTok{(}\DecValTok{1}\NormalTok{,}\DecValTok{3}\NormalTok{),i] =}\StringTok{ }\KeywordTok{quantile}\NormalTok{(ys, }\DataTypeTok{probs=}\KeywordTok{c}\NormalTok{(}\FloatTok{0.1}\NormalTok{,}\FloatTok{0.9}\NormalTok{))}
+\NormalTok{\}}
+\end{Highlighting}
+\end{Shaded}
+
+We see that the effect of haematocrit on mortality is non-linear under
+this model: below 20 is protective, above 20 plateaus out:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{par}\NormalTok{(}\DataTypeTok{las=}\DecValTok{1}\NormalTok{, }\DataTypeTok{bty=}\StringTok{'n'}\NormalTok{)}
+\KeywordTok{plot}\NormalTok{(x_hcts,probs[}\DecValTok{2}\NormalTok{,], }\DataTypeTok{xlim=}\KeywordTok{c}\NormalTok{(}\DecValTok{4}\NormalTok{,}\DecValTok{45}\NormalTok{), }\DataTypeTok{ylab=}\StringTok{'Predicted probability of death'}\NormalTok{, }
+     \DataTypeTok{xlab=}\StringTok{'Haematocrit (%)'}\NormalTok{, }\DataTypeTok{ylim=}\KeywordTok{c}\NormalTok{(}\DecValTok{0}\NormalTok{,}\DecValTok{40}\NormalTok{), }\DataTypeTok{lty=}\DecValTok{1}\NormalTok{, }\DataTypeTok{lwd=}\DecValTok{3}\NormalTok{, }\DataTypeTok{type=}\StringTok{'l'}\NormalTok{)}
+\KeywordTok{lines}\NormalTok{(x_hcts, probs[}\DecValTok{1}\NormalTok{,], }\DataTypeTok{lty=}\DecValTok{2}\NormalTok{, }\DataTypeTok{lwd=}\DecValTok{2}\NormalTok{)}
+\KeywordTok{lines}\NormalTok{(x_hcts, probs[}\DecValTok{3}\NormalTok{,], }\DataTypeTok{lty=}\DecValTok{2}\NormalTok{, }\DataTypeTok{lwd=}\DecValTok{2}\NormalTok{)}
+\KeywordTok{abline}\NormalTok{(}\DataTypeTok{h=}\NormalTok{overall_mortality, }\DataTypeTok{lwd=}\DecValTok{3}\NormalTok{, }\DataTypeTok{col=}\StringTok{'blue'}\NormalTok{,}\DataTypeTok{lty=}\DecValTok{2}\NormalTok{)}
+\KeywordTok{legend}\NormalTok{(}\StringTok{'topleft'}\NormalTok{, }\DataTypeTok{col=}\KeywordTok{c}\NormalTok{(}\StringTok{'black'}\NormalTok{,}\StringTok{'black'}\NormalTok{,}\StringTok{'blue'}\NormalTok{), }\DataTypeTok{lwd=}\DecValTok{3}\NormalTok{, }\DataTypeTok{lty=}\KeywordTok{c}\NormalTok{(}\DecValTok{1}\NormalTok{,}\DecValTok{2}\NormalTok{,}\DecValTok{2}\NormalTok{),}
+       \DataTypeTok{legend =} \KeywordTok{c}\NormalTok{(}\StringTok{'Mean predicted mortality'}\NormalTok{, }\StringTok{'80% predicted interval'}\NormalTok{,}\StringTok{'Observed mortality'}\NormalTok{))}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{LegacyAnalysis_files/figure-latex/counterfactualMortality_GAM-1.pdf}
 
 
 \end{document}
