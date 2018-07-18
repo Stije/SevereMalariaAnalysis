@@ -132,10 +132,127 @@
 
 This looks at the severe malaria legacy dataset from MORU
 
-The contributions of the different studies:
+\section{Imputation of missing
+variables}\label{imputation-of-missing-variables}
+
+Quite a lot of the important covariates are missing in the older
+studies. We use linear regression to estimate these unknown variables:
+
+\begin{itemize}
+\tightlist
+\item
+  Mising base deficit is imputed using bicarbonate (if available) else
+  using respiratory rate
+\item
+  Missing Blood urea nitrogen is imputed using creatinine
+\end{itemize}
+
+Impute base deficit from bicarbonate
 
 \begin{Shaded}
 \begin{Highlighting}[]
+\NormalTok{BD_and_bicarbonate =}\StringTok{ }\OperatorTok{!}\KeywordTok{is.na}\NormalTok{(Leg_data}\OperatorTok{$}\NormalTok{BD) }\OperatorTok{&}\StringTok{ }\OperatorTok{!}\KeywordTok{is.na}\NormalTok{(Leg_data}\OperatorTok{$}\NormalTok{bicarbonate)}
+\KeywordTok{print}\NormalTok{(}\KeywordTok{paste}\NormalTok{(}\StringTok{'We have '}\NormalTok{, }\KeywordTok{sum}\NormalTok{(BD_and_bicarbonate), }\StringTok{'observations for both bicarbonate and base deficit'}\NormalTok{))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] "We have  5048 observations for both bicarbonate and base deficit"
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{mod_impute1 =}\StringTok{ }\KeywordTok{lmer}\NormalTok{(BD }\OperatorTok{~}\StringTok{ }\NormalTok{bicarbonate }\OperatorTok{+}\StringTok{ }\NormalTok{(}\DecValTok{1} \OperatorTok{|}\StringTok{ }\NormalTok{studyID), }\DataTypeTok{data=}\NormalTok{ Leg_data[BD_and_bicarbonate,])}
+\NormalTok{missing_BD =}\StringTok{ }\KeywordTok{is.na}\NormalTok{(Leg_data}\OperatorTok{$}\NormalTok{BD)}
+\NormalTok{Available_Bicarbonate =}\StringTok{ }\OperatorTok{!}\KeywordTok{is.na}\NormalTok{(Leg_data}\OperatorTok{$}\NormalTok{bicarbonate)}
+\KeywordTok{print}\NormalTok{(}\KeywordTok{paste}\NormalTok{(}\KeywordTok{sum}\NormalTok{(missing_BD }\OperatorTok{&}\StringTok{ }\NormalTok{Available_Bicarbonate), }\StringTok{'observations will now be imputed'}\NormalTok{))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] "309 observations will now be imputed"
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{# impute with model}
+\NormalTok{Leg_data}\OperatorTok{$}\NormalTok{BD[missing_BD }\OperatorTok{&}\StringTok{ }\NormalTok{Available_Bicarbonate] =}\StringTok{ }\KeywordTok{predict}\NormalTok{(mod_impute1,}\DataTypeTok{newdata=}\NormalTok{Leg_data[missing_BD }\OperatorTok{&}\StringTok{ }\NormalTok{Available_Bicarbonate,], }\DataTypeTok{re.form=}\OtherTok{NA}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+Impute base deficit from respiratory rate
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{BD_and_rr =}\StringTok{ }\OperatorTok{!}\KeywordTok{is.na}\NormalTok{(Leg_data}\OperatorTok{$}\NormalTok{BD) }\OperatorTok{&}\StringTok{ }\OperatorTok{!}\KeywordTok{is.na}\NormalTok{(Leg_data}\OperatorTok{$}\NormalTok{rr)}
+\KeywordTok{print}\NormalTok{(}\KeywordTok{paste}\NormalTok{(}\StringTok{'We have '}\NormalTok{, }\KeywordTok{sum}\NormalTok{(BD_and_rr), }\StringTok{'observations for both resp rate and base deficit'}\NormalTok{))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] "We have  6560 observations for both resp rate and base deficit"
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{mod_impute2 =}\StringTok{ }\KeywordTok{lmer}\NormalTok{(BD }\OperatorTok{~}\StringTok{ }\NormalTok{rr }\OperatorTok{+}\StringTok{ }\NormalTok{(}\DecValTok{1} \OperatorTok{|}\StringTok{ }\NormalTok{studyID), }\DataTypeTok{data=}\NormalTok{ Leg_data[BD_and_rr,])}
+\NormalTok{missing_BD =}\StringTok{ }\KeywordTok{is.na}\NormalTok{(Leg_data}\OperatorTok{$}\NormalTok{BD)}
+\NormalTok{Available_rr =}\StringTok{ }\OperatorTok{!}\KeywordTok{is.na}\NormalTok{(Leg_data}\OperatorTok{$}\NormalTok{rr)}
+\KeywordTok{print}\NormalTok{(}\KeywordTok{paste}\NormalTok{(}\KeywordTok{sum}\NormalTok{(missing_BD }\OperatorTok{&}\StringTok{ }\NormalTok{Available_rr), }\StringTok{'observations will now be imputed'}\NormalTok{))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] "2662 observations will now be imputed"
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{Leg_data}\OperatorTok{$}\NormalTok{BD[missing_BD }\OperatorTok{&}\StringTok{ }\NormalTok{Available_rr] =}\StringTok{ }\KeywordTok{predict}\NormalTok{(mod_impute2,}\DataTypeTok{newdata=}\NormalTok{Leg_data[missing_BD }\OperatorTok{&}\StringTok{ }\NormalTok{Available_rr,], }\DataTypeTok{re.form=}\OtherTok{NA}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+Impute blood urea nitrogen from creatinine:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{BUN_and_cr =}\StringTok{ }\OperatorTok{!}\KeywordTok{is.na}\NormalTok{(Leg_data}\OperatorTok{$}\NormalTok{BUN) }\OperatorTok{&}\StringTok{ }\OperatorTok{!}\KeywordTok{is.na}\NormalTok{(Leg_data}\OperatorTok{$}\NormalTok{creatinine)}
+\KeywordTok{print}\NormalTok{(}\KeywordTok{paste}\NormalTok{(}\StringTok{'We have '}\NormalTok{, }\KeywordTok{sum}\NormalTok{(BUN_and_cr), }\StringTok{'observations for both blood urea nitrogen and creatinine'}\NormalTok{))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] "We have  1433 observations for both blood urea nitrogen and creatinine"
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{mod_impute3 =}\StringTok{ }\KeywordTok{lmer}\NormalTok{(BUN }\OperatorTok{~}\StringTok{ }\NormalTok{creatinine }\OperatorTok{+}\StringTok{ }\NormalTok{(}\DecValTok{1} \OperatorTok{|}\StringTok{ }\NormalTok{studyID), }\DataTypeTok{data=}\NormalTok{ Leg_data[BUN_and_cr,])}
+\NormalTok{missing_BUN =}\StringTok{ }\KeywordTok{is.na}\NormalTok{(Leg_data}\OperatorTok{$}\NormalTok{BUN)}
+\NormalTok{Available_cr =}\StringTok{ }\OperatorTok{!}\KeywordTok{is.na}\NormalTok{(Leg_data}\OperatorTok{$}\NormalTok{creatinine)}
+\KeywordTok{print}\NormalTok{(}\KeywordTok{paste}\NormalTok{(}\KeywordTok{sum}\NormalTok{(missing_BUN }\OperatorTok{&}\StringTok{ }\NormalTok{Available_cr), }\StringTok{'observations will now be imputed'}\NormalTok{))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] "679 observations will now be imputed"
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{Leg_data}\OperatorTok{$}\NormalTok{BUN[missing_BUN }\OperatorTok{&}\StringTok{ }\NormalTok{Available_cr] =}\StringTok{ }\KeywordTok{predict}\NormalTok{(mod_impute3,}\DataTypeTok{newdata=}\NormalTok{Leg_data[missing_BUN }\OperatorTok{&}\StringTok{ }\NormalTok{Available_cr,], }\DataTypeTok{re.form=}\OtherTok{NA}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+Resulting data we can now use: The contributions of the different
+studies:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{vars_interest =}\StringTok{ }\KeywordTok{c}\NormalTok{(}\StringTok{'outcome'}\NormalTok{,}\StringTok{'HCT'}\NormalTok{,}\StringTok{'LPAR_pct'}\NormalTok{,}\StringTok{'BD'}\NormalTok{,}\StringTok{'BUN'}\NormalTok{,}\StringTok{'AgeInYear'}\NormalTok{,}\StringTok{'drug_class'}\NormalTok{)}
+\NormalTok{complete_cases =}\StringTok{ }\KeywordTok{apply}\NormalTok{(Leg_data[,vars_interest], }\DecValTok{1}\NormalTok{, }\ControlFlowTok{function}\NormalTok{(x) }\KeywordTok{sum}\NormalTok{(}\KeywordTok{is.na}\NormalTok{(x))) }\OperatorTok{==}\StringTok{ }\DecValTok{0}
+\NormalTok{Complete_Leg_data =}\StringTok{ }\NormalTok{Leg_data[complete_cases,] }\CommentTok{# for the model fitting}
+\NormalTok{Complete_Leg_data}\OperatorTok{$}\NormalTok{studyID =}\StringTok{ }\KeywordTok{as.factor}\NormalTok{(}\KeywordTok{as.character}\NormalTok{(Complete_Leg_data}\OperatorTok{$}\NormalTok{studyID))}
 \CommentTok{# Whole dataset}
 \KeywordTok{table}\NormalTok{(Leg_data}\OperatorTok{$}\NormalTok{studyID)}
 \end{Highlighting}
@@ -158,9 +275,22 @@ The contributions of the different studies:
 
 \begin{verbatim}
 ## 
-##      AQUAMAT Core Malaria    SEAQUAMAT 
-##         3779          359         1090
+##          AAV           AQ     AQGambia      AQUAMAT Core Malaria 
+##          215          357          168         3667          669 
+##    SEAQUAMAT 
+##         1333
 \end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{Complete_Leg_data}\OperatorTok{$}\NormalTok{drug_AS =}\StringTok{ }\DecValTok{0}
+\NormalTok{Complete_Leg_data}\OperatorTok{$}\NormalTok{drug_AS[Complete_Leg_data}\OperatorTok{$}\NormalTok{drug_class}\OperatorTok{==}\StringTok{'artemisinin'}\NormalTok{]=}\DecValTok{1}
+
+\CommentTok{# remove infinite log parasitaemias}
+\NormalTok{ind_keep =}\StringTok{ }\OperatorTok{!}\NormalTok{(}\KeywordTok{is.infinite}\NormalTok{(Complete_Leg_data}\OperatorTok{$}\NormalTok{LPAR_pct) }\OperatorTok{|}\StringTok{ }\KeywordTok{is.nan}\NormalTok{(Complete_Leg_data}\OperatorTok{$}\NormalTok{LPAR_pct))}
+\NormalTok{Complete_Leg_data =}\StringTok{ }\NormalTok{Complete_Leg_data[ind_keep,]}
+\end{Highlighting}
+\end{Shaded}
 
 \section{Exploratory analysis}\label{exploratory-analysis}
 
@@ -176,20 +306,20 @@ Before fitting the more complex GAM models we explore the standard glm
 
 \begin{Shaded}
 \begin{Highlighting}[]
-\NormalTok{mod_full =}\StringTok{ }\KeywordTok{glmer}\NormalTok{(outcome }\OperatorTok{~}\StringTok{ }\NormalTok{HCT }\OperatorTok{+}\StringTok{ }\NormalTok{LPAR }\OperatorTok{+}\StringTok{ }\NormalTok{AgeInYear }\OperatorTok{+}\StringTok{ }\NormalTok{BUN }\OperatorTok{+}\StringTok{ }\NormalTok{BD }\OperatorTok{+}\StringTok{ }\NormalTok{drug }\OperatorTok{+}\StringTok{ }\NormalTok{(}\DecValTok{1} \OperatorTok{|}\StringTok{ }\NormalTok{studyID),}
+\NormalTok{mod_full =}\StringTok{ }\KeywordTok{glmer}\NormalTok{(outcome }\OperatorTok{~}\StringTok{ }\NormalTok{HCT }\OperatorTok{+}\StringTok{ }\NormalTok{LPAR_pct }\OperatorTok{+}\StringTok{ }\NormalTok{AgeInYear }\OperatorTok{+}\StringTok{ }\NormalTok{BUN }\OperatorTok{+}\StringTok{ }\NormalTok{BD }\OperatorTok{+}\StringTok{ }\NormalTok{drug_AS }\OperatorTok{+}\StringTok{ }\NormalTok{(}\DecValTok{1} \OperatorTok{|}\StringTok{ }\NormalTok{studyID),}
                \DataTypeTok{data=}\NormalTok{Complete_Leg_data, }\DataTypeTok{family=}\NormalTok{binomial)}
 \end{Highlighting}
 \end{Shaded}
 
 \begin{verbatim}
 ## Warning in checkConv(attr(opt, "derivs"), opt$par, ctrl = control
-## $checkConv, : unable to evaluate scaled gradient
+## $checkConv, : Model failed to converge with max|grad| = 0.00261273 (tol =
+## 0.001, component 1)
 \end{verbatim}
 
 \begin{verbatim}
-## Warning in checkConv(attr(opt, "derivs"), opt$par, ctrl = control
-## $checkConv, : Model failed to converge: degenerate Hessian with 1 negative
-## eigenvalues
+## Warning in checkConv(attr(opt, "derivs"), opt$par, ctrl = control$checkConv, : Model is nearly unidentifiable: very large eigenvalue
+##  - Rescale variables?
 \end{verbatim}
 
 \begin{Shaded}
@@ -199,77 +329,49 @@ Before fitting the more complex GAM models we explore the standard glm
 \end{Shaded}
 
 \begin{verbatim}
-## Warning in vcov.merMod(object, use.hessian = use.hessian): variance-covariance matrix computed from finite-difference Hessian is
-## not positive definite or contains NA values: falling back to var-cov estimated from RX
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in vcov.merMod(object, correlation = correlation, sigm = sig): variance-covariance matrix computed from finite-difference Hessian is
-## not positive definite or contains NA values: falling back to var-cov estimated from RX
-\end{verbatim}
-
-\begin{verbatim}
 ## Generalized linear mixed model fit by maximum likelihood (Laplace
 ##   Approximation) [glmerMod]
 ##  Family: binomial  ( logit )
-## Formula: 
-## outcome ~ HCT + LPAR + AgeInYear + BUN + BD + drug + (1 | studyID)
+## Formula: outcome ~ HCT + LPAR_pct + AgeInYear + BUN + BD + drug_AS + (1 |  
+##     studyID)
 ##    Data: Complete_Leg_data
 ## 
 ##      AIC      BIC   logLik deviance df.resid 
-##   3199.6   3278.3  -1587.8   3175.6     5216 
+##   4055.0   4109.0  -2019.5   4039.0     6329 
 ## 
 ## Scaled residuals: 
 ##     Min      1Q  Median      3Q     Max 
-## -2.7825 -0.3409 -0.2313 -0.1633 10.1058 
+## -5.3857 -0.3710 -0.2501 -0.1668 10.4468 
 ## 
 ## Random effects:
 ##  Groups  Name        Variance Std.Dev.
-##  studyID (Intercept) 0.07967  0.2823  
-## Number of obs: 5228, groups:  studyID, 3
+##  studyID (Intercept) 0.01961  0.14    
+## Number of obs: 6337, groups:  studyID, 6
 ## 
 ## Fixed effects:
-##                    Estimate Std. Error z value Pr(>|z|)    
-## (Intercept)      -1.850e+01  5.664e+02  -0.033  0.97394    
-## HCT               1.960e-02  5.471e-03   3.583  0.00034 ***
-## LPAR              1.855e-02  6.719e-02   0.276  0.78247    
-## AgeInYear         2.186e-02  4.343e-03   5.033 4.83e-07 ***
-## BUN               1.166e-02  1.694e-03   6.882 5.89e-12 ***
-## BD                1.361e-01  6.944e-03  19.601  < 2e-16 ***
-## drugArtesunate    1.404e+01  5.664e+02   0.025  0.98022    
-## drugChloroquine   1.610e+01  5.664e+02   0.028  0.97733    
-## drugLumefantrine -1.034e+00  4.187e+03   0.000  0.99980    
-## drugNAC          -5.245e+00  8.479e+03  -0.001  0.99951    
-## drugQuinine       1.438e+01  5.664e+02   0.025  0.97975    
+##              Estimate Std. Error z value Pr(>|z|)    
+## (Intercept) -4.299889   0.201160 -21.376  < 2e-16 ***
+## HCT          0.023103   0.004787   4.826 1.39e-06 ***
+## LPAR_pct    -0.009963   0.056027  -0.178    0.859    
+## AgeInYear    0.019548   0.003473   5.628 1.82e-08 ***
+## BUN          0.013545   0.001445   9.377  < 2e-16 ***
+## BD           0.137028   0.006703  20.442  < 2e-16 ***
+## drug_AS     -0.343092   0.083300  -4.119 3.81e-05 ***
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
 ## Correlation of Fixed Effects:
-##             (Intr) HCT    LPAR   AgInYr BUN    BD     drgArt drgChl drgLmf
-## HCT          0.000                                                        
-## LPAR        -0.001 -0.172                                                 
-## AgeInYear    0.000 -0.183  0.030                                          
-## BUN          0.000  0.064 -0.050 -0.189                                   
-## BD           0.000  0.263 -0.135  0.120 -0.263                            
-## drugArtesnt -1.000  0.000  0.000  0.000  0.000  0.000                     
-## drugChlorqn -1.000  0.000  0.000  0.000  0.000  0.000  1.000              
-## drugLmfntrn -0.135  0.000  0.000  0.000  0.000  0.000  0.135  0.135       
-## drugNAC     -0.067  0.000  0.000  0.000  0.000  0.000  0.067  0.067  0.009
-## drugQuinine -1.000  0.000  0.000  0.000  0.000  0.000  1.000  1.000  0.135
-##             drgNAC
-## HCT               
-## LPAR              
-## AgeInYear         
-## BUN               
-## BD                
-## drugArtesnt       
-## drugChlorqn       
-## drugLmfntrn       
-## drugNAC           
-## drugQuinine  0.067
+##           (Intr) HCT    LPAR_p AgInYr BUN    BD    
+## HCT       -0.716                                   
+## LPAR_pct  -0.096  0.017                            
+## AgeInYear -0.305 -0.107 -0.028                     
+## BUN       -0.279  0.127 -0.037 -0.132              
+## BD        -0.404  0.226 -0.165  0.115 -0.211       
+## drug_AS   -0.150 -0.015 -0.026 -0.075 -0.056 -0.010
 ## convergence code: 0
-## unable to evaluate scaled gradient
-## Model failed to converge: degenerate  Hessian with 1 negative eigenvalues
+## Model failed to converge with max|grad| = 0.00261273 (tol = 0.001, component 1)
+## Model is nearly unidentifiable: very large eigenvalue
+##  - Rescale variables?
 \end{verbatim}
 
 Now let's make counterfactual predictions of anaemia on death for the
@@ -310,7 +412,7 @@ predicted mean probability of death and 80\% predictive intervals.
 \end{Highlighting}
 \end{Shaded}
 
-\includegraphics{LegacyAnalysis_files/figure-latex/unnamed-chunk-4-1.pdf}
+\includegraphics{LegacyAnalysis_files/figure-latex/unnamed-chunk-7-1.pdf}
 
 \subsection{More complex GAM model}\label{more-complex-gam-model}
 
@@ -322,7 +424,7 @@ mortality.
 
 \begin{Shaded}
 \begin{Highlighting}[]
-\NormalTok{mod_full_GAM =}\StringTok{ }\KeywordTok{gam}\NormalTok{(outcome }\OperatorTok{~}\StringTok{ }\KeywordTok{s}\NormalTok{(HCT,AgeInYear) }\OperatorTok{+}\StringTok{ }\NormalTok{LPAR }\OperatorTok{+}\StringTok{ }\NormalTok{BUN }\OperatorTok{+}\StringTok{ }\NormalTok{BD,}
+\NormalTok{mod_full_GAM =}\StringTok{ }\KeywordTok{gam}\NormalTok{(outcome }\OperatorTok{~}\StringTok{ }\KeywordTok{s}\NormalTok{(HCT,AgeInYear) }\OperatorTok{+}\StringTok{ }\NormalTok{LPAR_pct }\OperatorTok{+}\StringTok{ }\NormalTok{BUN }\OperatorTok{+}\StringTok{ }\NormalTok{BD,}
                \DataTypeTok{data=}\NormalTok{Complete_Leg_data, }\DataTypeTok{family=}\NormalTok{binomial)}
 \KeywordTok{summary}\NormalTok{(mod_full_GAM)}
 \end{Highlighting}
@@ -334,25 +436,25 @@ mortality.
 ## Link function: logit 
 ## 
 ## Formula:
-## outcome ~ s(HCT, AgeInYear) + LPAR + BUN + BD
+## outcome ~ s(HCT, AgeInYear) + LPAR_pct + BUN + BD
 ## 
 ## Parametric coefficients:
 ##              Estimate Std. Error z value Pr(>|z|)    
-## (Intercept) -3.706458   0.332187 -11.158  < 2e-16 ***
-## LPAR        -0.003305   0.067265  -0.049    0.961    
-## BUN          0.010038   0.001720   5.838 5.29e-09 ***
-## BD           0.140822   0.007133  19.742  < 2e-16 ***
+## (Intercept) -3.698517   0.093454 -39.576   <2e-16 ***
+## LPAR_pct    -0.017952   0.054425  -0.330    0.742    
+## BUN          0.011993   0.001433   8.371   <2e-16 ***
+## BD           0.143227   0.006868  20.856   <2e-16 ***
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
 ## Approximate significance of smooth terms:
-##                    edf Ref.df Chi.sq p-value    
-## s(HCT,AgeInYear) 6.522   9.09  131.3  <2e-16 ***
+##                  edf Ref.df Chi.sq p-value    
+## s(HCT,AgeInYear) 6.4  8.943  153.9  <2e-16 ***
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
-## R-sq.(adj) =  0.202   Deviance explained = 21.4%
-## UBRE = -0.38846  Scale est. = 1         n = 5228
+## R-sq.(adj) =  0.184   Deviance explained = 19.3%
+## UBRE = -0.36036  Scale est. = 1         n = 6337
 \end{verbatim}
 
 Now we compute the corresponding counterfactual probabilities of death
@@ -379,8 +481,7 @@ this model: below 20 is protective, above 20 plateaus out:
 \begin{Highlighting}[]
 \CommentTok{#}
 \KeywordTok{par}\NormalTok{(}\DataTypeTok{las=}\DecValTok{1}\NormalTok{, }\DataTypeTok{mfrow=}\KeywordTok{c}\NormalTok{(}\DecValTok{1}\NormalTok{,}\DecValTok{2}\NormalTok{), }\DataTypeTok{bty=}\StringTok{'n'}\NormalTok{, }\DataTypeTok{mar=}\KeywordTok{c}\NormalTok{(}\DecValTok{4}\NormalTok{,}\DecValTok{4}\NormalTok{,}\DecValTok{1}\NormalTok{,}\DecValTok{1}\NormalTok{))}
-
-
+\NormalTok{### Plot the standard logistic regression model}
 \KeywordTok{plot}\NormalTok{(x_hcts,probs_lin[}\DecValTok{2}\NormalTok{,], }\DataTypeTok{xlim=}\KeywordTok{c}\NormalTok{(}\DecValTok{4}\NormalTok{,}\DecValTok{45}\NormalTok{), }\DataTypeTok{ylab=}\StringTok{'Predicted probability of death'}\NormalTok{, }
      \DataTypeTok{xlab=}\StringTok{'Haematocrit (%)'}\NormalTok{, }\DataTypeTok{ylim=}\KeywordTok{c}\NormalTok{(}\DecValTok{0}\NormalTok{,}\DecValTok{25}\NormalTok{), }\DataTypeTok{lty=}\DecValTok{1}\NormalTok{, }\DataTypeTok{lwd=}\DecValTok{3}\NormalTok{, }\DataTypeTok{type=}\StringTok{'l'}\NormalTok{)}
 \KeywordTok{lines}\NormalTok{(x_hcts, probs_lin[}\DecValTok{1}\NormalTok{,], }\DataTypeTok{lty=}\DecValTok{2}\NormalTok{, }\DataTypeTok{lwd=}\DecValTok{2}\NormalTok{)}
@@ -397,7 +498,7 @@ this model: below 20 is protective, above 20 plateaus out:
 \end{Highlighting}
 \end{Shaded}
 
-\includegraphics{LegacyAnalysis_files/figure-latex/counterfactualMortality_GAM-1.pdf}
+\includegraphics{LegacyAnalysis_files/figure-latex/counterfactualPlots-1.pdf}
 
 \begin{Shaded}
 \begin{Highlighting}[]
