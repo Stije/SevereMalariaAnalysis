@@ -14,13 +14,26 @@ This looks at the severe malaria legacy dataset from MORU
 
 ```{r, echo=FALSE}
 load('RData/Data.R')
-complete_cases = apply(m, 1, function(x) sum(is.na(x))) == 0
+# some basic data cleaning - probably should move this to the MakeRData r script
+m$drug = as.factor(m$drug)
+rm_ind = is.na(m$outcome) | is.na(m$studyID)
+m = m[!rm_ind, ]
+vars_interest = c('outcome','HCT','LPAR','BD','BUN','AgeInYear','drug')
+complete_cases = apply(m[,vars_interest], 1, function(x) sum(is.na(x))) == 0
 Leg_data = m[,]  # for the plotting
 Complete_Leg_data = m[complete_cases,] # for the model fitting
 ```
 
-
+The contributions of the different studies:
 ```{r}
+# Whole dataset
+table(Leg_data$studyID)
+# in the complete dataset (all variables recorded)
+table(Complete_Leg_data$studyID)
+```
+
+
+```{r, echo=FALSE, include=FALSE}
 library(lme4)
 # For the GAM modelling
 library(mgcv)
@@ -37,10 +50,10 @@ par(las=1, mfrow=c(2,2), mar=c(4,4,1,1), bty='n')
 ## Base Excess and HCT
 plot(jitter(Leg_data$HCT,amount=1), jitter(Leg_data$BD), 
      col=Leg_data$studyID, pch='*', xlab='Haematocrit (%)', ylab='Base Deficit')
-legend('topright', col=unique(Leg_data$studyID), legend = unique(Leg_data$studyID), pch=18, bg ='white')
 mod = lmer(formula = BD ~ HCT + (1 | studyID), data = Leg_data)
 ys = predict(object = mod, newdata = data.frame(HCT=8:50, studyID=NA), re.form=NA)
 lines(8:50, ys, lwd=3, col='black')
+legend('topright', col=unique(Leg_data$studyID), legend = unique(Leg_data$studyID), pch=18, bg ='white') 
 
 ## Parasitaemia and Anaemia
 plot(jitter(Leg_data$HCT,amount=1), Leg_data$LPAR, 
@@ -73,7 +86,7 @@ lines(0:80, ys, lwd=3, col='black')
 Before fitting the more complex GAM models we explore the standard glm (logistic regression) models.
 
 ```{r deathmodel_glm}
-mod_full = glmer(outcome ~ HCT + LPAR + AgeInYear + BUN + BD + (1 | studyID),
+mod_full = glmer(outcome ~ HCT + LPAR + AgeInYear + BUN + BD + drug + (1 | studyID),
                data=Complete_Leg_data, family=binomial)
 summary(mod_full)
 ```
@@ -82,7 +95,7 @@ Now let's make counterfactual predictions of anaemia on death for the patients i
 The way to interpret this `counterfactual' plot is as follows: suppose that every individual in the dataset was assigned (as in a intervention) a specific haematocrit $X$, what would the resulting per patient probability of death be. Here we summarise these probabilities by the predicted mean probability of death and 80\% predictive intervals.
 
 ```{r counterfactualMortality}
-overall_mortality = 100*mean(Leg_data$outcome)
+overall_mortality = 100*mean(Complete_Leg_data$outcome)
 par(las=1, bty='n')
 x_hcts = seq(4,45, by=.5)
 probs = array(dim = c(3, length(x_hcts)))
