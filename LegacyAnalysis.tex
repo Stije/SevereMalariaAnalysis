@@ -180,43 +180,6 @@ This looks at the severe malaria legacy dataset from MORU
 
 Let's look at the key predictive variables. We use a random effects term
 to model differences between studies.
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\KeywordTok{par}\NormalTok{(}\DataTypeTok{las=}\DecValTok{1}\NormalTok{, }\DataTypeTok{mfrow=}\KeywordTok{c}\NormalTok{(}\DecValTok{2}\NormalTok{,}\DecValTok{2}\NormalTok{), }\DataTypeTok{mar=}\KeywordTok{c}\NormalTok{(}\DecValTok{4}\NormalTok{,}\DecValTok{4}\NormalTok{,}\DecValTok{1}\NormalTok{,}\DecValTok{1}\NormalTok{), }\DataTypeTok{bty=}\StringTok{'n'}\NormalTok{)}
-\NormalTok{## Base Excess and HCT}
-\KeywordTok{plot}\NormalTok{(}\KeywordTok{jitter}\NormalTok{(Leg_data}\OperatorTok{$}\NormalTok{HCT,}\DataTypeTok{amount=}\DecValTok{1}\NormalTok{), }\KeywordTok{jitter}\NormalTok{(Leg_data}\OperatorTok{$}\NormalTok{BD), }
-     \DataTypeTok{col=}\NormalTok{Leg_data}\OperatorTok{$}\NormalTok{studyID, }\DataTypeTok{pch=}\StringTok{'*'}\NormalTok{, }\DataTypeTok{xlab=}\StringTok{'Haematocrit'}\NormalTok{, }\DataTypeTok{ylab=}\StringTok{'Base Deficit'}\NormalTok{)}
-\KeywordTok{legend}\NormalTok{(}\StringTok{'topright'}\NormalTok{, }\DataTypeTok{col=}\KeywordTok{unique}\NormalTok{(Leg_data}\OperatorTok{$}\NormalTok{studyID), }\DataTypeTok{legend =} \KeywordTok{unique}\NormalTok{(Leg_data}\OperatorTok{$}\NormalTok{studyID), }\DataTypeTok{pch=}\StringTok{'*'}\NormalTok{)}
-\NormalTok{mod =}\StringTok{ }\KeywordTok{lmer}\NormalTok{(}\DataTypeTok{formula =}\NormalTok{ BD }\OperatorTok{~}\StringTok{ }\NormalTok{HCT }\OperatorTok{+}\StringTok{ }\NormalTok{(}\DecValTok{1} \OperatorTok{|}\StringTok{ }\NormalTok{studyID), }\DataTypeTok{data =}\NormalTok{ Leg_data)}
-\NormalTok{ys =}\StringTok{ }\KeywordTok{predict}\NormalTok{(}\DataTypeTok{object =}\NormalTok{ mod, }\DataTypeTok{newdata =} \KeywordTok{data.frame}\NormalTok{(}\DataTypeTok{HCT=}\DecValTok{8}\OperatorTok{:}\DecValTok{50}\NormalTok{, }\DataTypeTok{studyID=}\OtherTok{NA}\NormalTok{), }\DataTypeTok{re.form=}\OtherTok{NA}\NormalTok{)}
-\KeywordTok{lines}\NormalTok{(}\DecValTok{8}\OperatorTok{:}\DecValTok{50}\NormalTok{, ys, }\DataTypeTok{lwd=}\DecValTok{3}\NormalTok{, }\DataTypeTok{col=}\StringTok{'black'}\NormalTok{)}
-
-\NormalTok{## Parasitaemia and Anaemia}
-\KeywordTok{plot}\NormalTok{(}\KeywordTok{jitter}\NormalTok{(Leg_data}\OperatorTok{$}\NormalTok{HCT,}\DataTypeTok{amount=}\DecValTok{1}\NormalTok{), Leg_data}\OperatorTok{$}\NormalTok{LPAR, }
-     \DataTypeTok{col=}\NormalTok{Leg_data}\OperatorTok{$}\NormalTok{studyID, }\DataTypeTok{pch=}\StringTok{'*'}\NormalTok{, }\DataTypeTok{xlab=}\StringTok{'Haematocrit'}\NormalTok{, }\DataTypeTok{ylab=}\StringTok{'Log10 Parasitaemia'}\NormalTok{)}
-\CommentTok{#legend('topright', col=unique(Leg_data$studyID), legend = unique(Leg_data$studyID), pch='*')}
-\NormalTok{mod =}\StringTok{ }\KeywordTok{lmer}\NormalTok{(}\DataTypeTok{formula =}\NormalTok{ LPAR }\OperatorTok{~}\StringTok{ }\NormalTok{HCT }\OperatorTok{+}\StringTok{ }\NormalTok{(}\DecValTok{1} \OperatorTok{|}\StringTok{ }\NormalTok{studyID), }\DataTypeTok{data =}\NormalTok{ Leg_data)}
-\NormalTok{ys =}\StringTok{ }\KeywordTok{predict}\NormalTok{(}\DataTypeTok{object =}\NormalTok{ mod, }\DataTypeTok{newdata =} \KeywordTok{data.frame}\NormalTok{(}\DataTypeTok{HCT=}\DecValTok{8}\OperatorTok{:}\DecValTok{50}\NormalTok{, }\DataTypeTok{studyID=}\OtherTok{NA}\NormalTok{), }\DataTypeTok{re.form=}\OtherTok{NA}\NormalTok{)}
-\KeywordTok{lines}\NormalTok{(}\DecValTok{8}\OperatorTok{:}\DecValTok{50}\NormalTok{, ys, }\DataTypeTok{lwd=}\DecValTok{3}\NormalTok{, }\DataTypeTok{col=}\StringTok{'black'}\NormalTok{)}
-\NormalTok{## BUN and BD}
-\KeywordTok{plot}\NormalTok{(}\KeywordTok{jitter}\NormalTok{(Leg_data}\OperatorTok{$}\NormalTok{BUN,}\DataTypeTok{amount=}\DecValTok{1}\NormalTok{), }\KeywordTok{jitter}\NormalTok{(Leg_data}\OperatorTok{$}\NormalTok{BD), }\DataTypeTok{xlim=}\KeywordTok{c}\NormalTok{(}\DecValTok{0}\NormalTok{,}\DecValTok{140}\NormalTok{),}
-     \DataTypeTok{col=}\NormalTok{Leg_data}\OperatorTok{$}\NormalTok{studyID, }\DataTypeTok{pch=}\StringTok{'*'}\NormalTok{, }\DataTypeTok{xlab=}\StringTok{'Blood Urea Nitrogen'}\NormalTok{, }\DataTypeTok{ylab=}\StringTok{'Base Deficit'}\NormalTok{)}
-\CommentTok{#legend('topright', col=unique(Leg_data$studyID), legend = unique(Leg_data$studyID), pch='*')}
-\NormalTok{mod =}\StringTok{ }\KeywordTok{lmer}\NormalTok{(}\DataTypeTok{formula =}\NormalTok{ BD }\OperatorTok{~}\StringTok{ }\NormalTok{BUN }\OperatorTok{+}\StringTok{ }\NormalTok{(}\DecValTok{1} \OperatorTok{|}\StringTok{ }\NormalTok{studyID), }\DataTypeTok{data =}\NormalTok{ Leg_data)}
-\NormalTok{ys =}\StringTok{ }\KeywordTok{predict}\NormalTok{(}\DataTypeTok{object =}\NormalTok{ mod, }\DataTypeTok{newdata =} \KeywordTok{data.frame}\NormalTok{(}\DataTypeTok{BUN=}\DecValTok{5}\OperatorTok{:}\DecValTok{140}\NormalTok{, }\DataTypeTok{studyID=}\OtherTok{NA}\NormalTok{), }\DataTypeTok{re.form=}\OtherTok{NA}\NormalTok{)}
-\KeywordTok{lines}\NormalTok{(}\DecValTok{5}\OperatorTok{:}\DecValTok{140}\NormalTok{, ys, }\DataTypeTok{lwd=}\DecValTok{3}\NormalTok{, }\DataTypeTok{col=}\StringTok{'black'}\NormalTok{)}
-
-\NormalTok{## Parasitaemia and Anaemia}
-\KeywordTok{plot}\NormalTok{(}\KeywordTok{jitter}\NormalTok{(Leg_data}\OperatorTok{$}\NormalTok{AgeInYear,}\DataTypeTok{amount=}\DecValTok{1}\NormalTok{), Leg_data}\OperatorTok{$}\NormalTok{HCT, }
-     \DataTypeTok{col=}\NormalTok{Leg_data}\OperatorTok{$}\NormalTok{studyID, }\DataTypeTok{pch=}\StringTok{'*'}\NormalTok{, }\DataTypeTok{xlab=}\StringTok{'Age in years'}\NormalTok{, }\DataTypeTok{ylab=}\StringTok{'Haematocrit'}\NormalTok{)}
-\CommentTok{#legend('topright', col=unique(Leg_data$studyID), legend = unique(Leg_data$studyID), pch='*')}
-\NormalTok{mod =}\StringTok{ }\KeywordTok{lmer}\NormalTok{(}\DataTypeTok{formula =}\NormalTok{ HCT }\OperatorTok{~}\StringTok{ }\NormalTok{AgeInYear }\OperatorTok{+}\StringTok{ }\NormalTok{(}\DecValTok{1} \OperatorTok{|}\StringTok{ }\NormalTok{studyID), }\DataTypeTok{data =}\NormalTok{ Leg_data)}
-\NormalTok{ys =}\StringTok{ }\KeywordTok{predict}\NormalTok{(}\DataTypeTok{object =}\NormalTok{ mod, }\DataTypeTok{newdata =} \KeywordTok{data.frame}\NormalTok{(}\DataTypeTok{AgeInYear=}\DecValTok{0}\OperatorTok{:}\DecValTok{80}\NormalTok{, }\DataTypeTok{studyID=}\OtherTok{NA}\NormalTok{), }\DataTypeTok{re.form=}\OtherTok{NA}\NormalTok{)}
-\KeywordTok{lines}\NormalTok{(}\DecValTok{0}\OperatorTok{:}\DecValTok{80}\NormalTok{, ys, }\DataTypeTok{lwd=}\DecValTok{3}\NormalTok{, }\DataTypeTok{col=}\StringTok{'black'}\NormalTok{)}
-\end{Highlighting}
-\end{Shaded}
-
 \includegraphics{LegacyAnalysis_files/figure-latex/ExploratoryPlots-1.pdf}
 
 \section{Predictive value of anaemia on death adjusting for
@@ -290,9 +253,10 @@ patients in the database:
 
 \begin{Shaded}
 \begin{Highlighting}[]
+\NormalTok{overall_mortality =}\StringTok{ }\DecValTok{100}\OperatorTok{*}\KeywordTok{mean}\NormalTok{(Leg_data}\OperatorTok{$}\NormalTok{outcome)}
 \KeywordTok{par}\NormalTok{(}\DataTypeTok{las=}\DecValTok{1}\NormalTok{)}
-\KeywordTok{plot}\NormalTok{(}\OtherTok{NA}\NormalTok{,}\OtherTok{NA}\NormalTok{, }\DataTypeTok{xlim=}\KeywordTok{c}\NormalTok{(}\DecValTok{4}\NormalTok{,}\DecValTok{45}\NormalTok{), }\DataTypeTok{ylim=}\KeywordTok{c}\NormalTok{(}\DecValTok{0}\NormalTok{,}\DecValTok{40}\NormalTok{),}\DataTypeTok{ylab=}\StringTok{'% predicted mortality'}\NormalTok{, }\DataTypeTok{xlab=}\StringTok{'Haematocrit'}\NormalTok{)}
-\KeywordTok{title}\NormalTok{(}\StringTok{'Countrerfactual predictions: Overall mortality'}\NormalTok{)}
+\KeywordTok{plot}\NormalTok{(}\OtherTok{NA}\NormalTok{,}\OtherTok{NA}\NormalTok{, }\DataTypeTok{xlim=}\KeywordTok{c}\NormalTok{(}\DecValTok{4}\NormalTok{,}\DecValTok{45}\NormalTok{), }\DataTypeTok{ylim=}\KeywordTok{c}\NormalTok{(}\DecValTok{0}\NormalTok{,}\DecValTok{50}\NormalTok{),}\DataTypeTok{ylab=}\StringTok{'% predicted mortality'}\NormalTok{, }\DataTypeTok{xlab=}\StringTok{'Haematocrit (%)'}\NormalTok{)}
+\KeywordTok{title}\NormalTok{(}\StringTok{'Counterfactual predictions of mortality'}\NormalTok{)}
 \ControlFlowTok{for}\NormalTok{(HCT }\ControlFlowTok{in} \DecValTok{4}\OperatorTok{:}\DecValTok{45}\NormalTok{)\{}
 \NormalTok{  mydata =}\StringTok{ }\NormalTok{Leg_data}
 \NormalTok{  mydata}\OperatorTok{$}\NormalTok{HCT=HCT}
@@ -301,7 +265,9 @@ patients in the database:
   \KeywordTok{points}\NormalTok{(HCT,}\KeywordTok{mean}\NormalTok{(ys), }\DataTypeTok{pch=}\DecValTok{18}\NormalTok{)}
   \KeywordTok{points}\NormalTok{(}\KeywordTok{rep}\NormalTok{(HCT,}\DecValTok{2}\NormalTok{), }\KeywordTok{quantile}\NormalTok{(ys, }\DataTypeTok{probs=}\KeywordTok{c}\NormalTok{(}\FloatTok{0.1}\NormalTok{,}\FloatTok{0.9}\NormalTok{)), }\DataTypeTok{pch=}\StringTok{'-'}\NormalTok{, }\DataTypeTok{col=}\StringTok{'red'}\NormalTok{)}
 \NormalTok{\}}
-\KeywordTok{abline}\NormalTok{(}\DataTypeTok{h=}\DecValTok{10}\NormalTok{, }\DataTypeTok{lwd=}\DecValTok{3}\NormalTok{, }\DataTypeTok{col=}\StringTok{'blue'}\NormalTok{)}
+\KeywordTok{abline}\NormalTok{(}\DataTypeTok{h=}\NormalTok{overall_mortality, }\DataTypeTok{lwd=}\DecValTok{3}\NormalTok{, }\DataTypeTok{col=}\StringTok{'blue'}\NormalTok{)}
+\KeywordTok{legend}\NormalTok{(}\StringTok{'topleft'}\NormalTok{, }\DataTypeTok{col=}\KeywordTok{c}\NormalTok{(}\StringTok{'black'}\NormalTok{,}\StringTok{'red'}\NormalTok{,}\StringTok{'blue'}\NormalTok{), }\DataTypeTok{lwd=}\DecValTok{3}\NormalTok{, }\DataTypeTok{lty=}\DecValTok{1}\NormalTok{,}
+       \DataTypeTok{legend =} \KeywordTok{c}\NormalTok{(}\StringTok{'Mean predicted mortality'}\NormalTok{, }\StringTok{'80% predicted interval'}\NormalTok{,}\StringTok{'Observed mortality'}\NormalTok{))}
 \end{Highlighting}
 \end{Shaded}
 
