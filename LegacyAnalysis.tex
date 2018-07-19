@@ -404,7 +404,7 @@ predicted mean probability of death and 80\% predictive intervals.
 \begin{Shaded}
 \begin{Highlighting}[]
 \KeywordTok{plot}\NormalTok{(x_hcts,probs_lin[}\DecValTok{2}\NormalTok{,], }\DataTypeTok{xlim=}\KeywordTok{c}\NormalTok{(}\DecValTok{4}\NormalTok{,}\DecValTok{45}\NormalTok{), }\DataTypeTok{ylab=}\StringTok{'Predicted probability of death'}\NormalTok{, }
-     \DataTypeTok{xlab=}\StringTok{'Haematocrit (%)'}\NormalTok{, }\DataTypeTok{ylim=}\KeywordTok{c}\NormalTok{(}\DecValTok{0}\NormalTok{,}\DecValTok{30}\NormalTok{), }\DataTypeTok{lty=}\DecValTok{1}\NormalTok{, }\DataTypeTok{lwd=}\DecValTok{3}\NormalTok{, }\DataTypeTok{type=}\StringTok{'l'}\NormalTok{)}
+     \DataTypeTok{xlab=}\StringTok{'Haematocrit (%)'}\NormalTok{, }\DataTypeTok{ylim=}\KeywordTok{c}\NormalTok{(}\DecValTok{0}\NormalTok{,}\DecValTok{20}\NormalTok{), }\DataTypeTok{lty=}\DecValTok{1}\NormalTok{, }\DataTypeTok{lwd=}\DecValTok{3}\NormalTok{, }\DataTypeTok{type=}\StringTok{'l'}\NormalTok{)}
 \KeywordTok{lines}\NormalTok{(x_hcts, probs_lin[}\DecValTok{1}\NormalTok{,], }\DataTypeTok{lty=}\DecValTok{2}\NormalTok{, }\DataTypeTok{lwd=}\DecValTok{2}\NormalTok{)}
 \KeywordTok{lines}\NormalTok{(x_hcts, probs_lin[}\DecValTok{3}\NormalTok{,], }\DataTypeTok{lty=}\DecValTok{2}\NormalTok{, }\DataTypeTok{lwd=}\DecValTok{2}\NormalTok{)}
 \KeywordTok{abline}\NormalTok{(}\DataTypeTok{h=}\NormalTok{overall_median_mortality, }\DataTypeTok{lwd=}\DecValTok{3}\NormalTok{, }\DataTypeTok{col=}\StringTok{'blue'}\NormalTok{,}\DataTypeTok{lty=}\DecValTok{2}\NormalTok{)}
@@ -421,12 +421,13 @@ The GAM model allows for non-linear relationships between certain
 variables and the outcome.
 
 Here we fit as non-linear the effect of age and haematocrit on
-mortality.
+mortality. We add a random effect term for the studyID We should also be
+doing this for the study site\ldots{}
 
 \begin{Shaded}
 \begin{Highlighting}[]
 \NormalTok{mod_full_GAM =}\StringTok{ }\KeywordTok{gam}\NormalTok{(outcome }\OperatorTok{~}\StringTok{ }\KeywordTok{s}\NormalTok{(HCT,AgeInYear) }\OperatorTok{+}\StringTok{ }\NormalTok{LPAR_pct  }\OperatorTok{+}\StringTok{ }\NormalTok{coma }\OperatorTok{+}\StringTok{ }\NormalTok{convulsions }\OperatorTok{+}
-\StringTok{                   }\NormalTok{poedema }\OperatorTok{+}\StringTok{ }\NormalTok{BUN }\OperatorTok{+}\StringTok{ }\NormalTok{BD }\OperatorTok{+}\StringTok{ }\NormalTok{drug_AS,}
+\StringTok{                   }\NormalTok{poedema }\OperatorTok{+}\StringTok{ }\NormalTok{BUN }\OperatorTok{+}\StringTok{ }\NormalTok{BD }\OperatorTok{+}\StringTok{ }\NormalTok{drug_AS }\OperatorTok{+}\StringTok{ }\KeywordTok{s}\NormalTok{(studyID, }\DataTypeTok{bs=}\StringTok{'re'}\NormalTok{),}
                \DataTypeTok{data=}\NormalTok{Complete_Leg_data, }\DataTypeTok{family=}\NormalTok{binomial)}
 \KeywordTok{summary}\NormalTok{(mod_full_GAM)}
 \end{Highlighting}
@@ -439,29 +440,30 @@ mortality.
 ## 
 ## Formula:
 ## outcome ~ s(HCT, AgeInYear) + LPAR_pct + coma + convulsions + 
-##     poedema + BUN + BD + drug_AS
+##     poedema + BUN + BD + drug_AS + s(studyID, bs = "re")
 ## 
 ## Parametric coefficients:
 ##               Estimate Std. Error z value Pr(>|z|)    
-## (Intercept)  -4.382411   0.125428 -34.940  < 2e-16 ***
-## LPAR_pct      0.048145   0.058762   0.819 0.412598    
-## coma          1.393212   0.096148  14.490  < 2e-16 ***
-## convulsions1  0.514489   0.111133   4.629 3.67e-06 ***
-## poedema1      0.735753   0.363146   2.026 0.042759 *  
-## BUN           0.013112   0.001594   8.227  < 2e-16 ***
-## BD            0.133356   0.007259  18.371  < 2e-16 ***
-## drug_AS      -0.335189   0.088521  -3.787 0.000153 ***
+## (Intercept)  -4.397435   0.135968 -32.342  < 2e-16 ***
+## LPAR_pct      0.050612   0.059250   0.854 0.392986    
+## coma          1.400706   0.096829  14.466  < 2e-16 ***
+## convulsions1  0.510489   0.111814   4.566 4.98e-06 ***
+## poedema1      0.748149   0.366194   2.043 0.041048 *  
+## BUN           0.013114   0.001601   8.192 2.57e-16 ***
+## BD            0.132736   0.007276  18.243  < 2e-16 ***
+## drug_AS      -0.332430   0.088940  -3.738 0.000186 ***
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
 ## Approximate significance of smooth terms:
-##                    edf Ref.df Chi.sq p-value    
-## s(HCT,AgeInYear) 6.936  9.685  97.96  <2e-16 ***
+##                    edf Ref.df Chi.sq  p-value    
+## s(HCT,AgeInYear) 6.846  9.561 73.442 8.24e-12 ***
+## s(studyID)       1.172  5.000  1.505    0.252    
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
-## R-sq.(adj) =  0.251   Deviance explained = 26.6%
-## UBRE = -0.4212  Scale est. = 1         n = 6097
+## R-sq.(adj) =  0.251   Deviance explained = 26.7%
+## UBRE = -0.42123  Scale est. = 1         n = 6097
 \end{verbatim}
 
 Now we compute the corresponding counterfactual probabilities of death
@@ -475,7 +477,7 @@ for the dataset for all values of the haematocrit:
 \ControlFlowTok{for}\NormalTok{(i }\ControlFlowTok{in} \DecValTok{1}\OperatorTok{:}\KeywordTok{length}\NormalTok{(x_hcts))\{}
 \NormalTok{  mydata =}\StringTok{ }\NormalTok{Complete_Leg_data}
 \NormalTok{  mydata}\OperatorTok{$}\NormalTok{HCT=x_hcts[i]}
-\NormalTok{  ys =}\StringTok{ }\DecValTok{100}\OperatorTok{*}\KeywordTok{predict}\NormalTok{(mod_full_GAM, }\DataTypeTok{newdata =}\NormalTok{ mydata, }\DataTypeTok{re.form=}\OtherTok{NA}\NormalTok{, }\DataTypeTok{type=}\StringTok{'response'}\NormalTok{)}
+\NormalTok{  ys =}\StringTok{ }\DecValTok{100}\OperatorTok{*}\KeywordTok{predict}\NormalTok{(mod_full_GAM, }\DataTypeTok{newdata =}\NormalTok{ mydata, }\DataTypeTok{type=}\StringTok{'response'}\NormalTok{)}
 \NormalTok{  probs_gam[,i] =}\StringTok{ }\KeywordTok{quantile}\NormalTok{(ys, }\DataTypeTok{probs=}\NormalTok{myquantiles)}
 \NormalTok{\}}
 \end{Highlighting}

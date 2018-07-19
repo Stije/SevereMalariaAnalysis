@@ -107,7 +107,7 @@ plot(jitter(Leg_data$HCT,amount=1), jitter(Leg_data$BD),
 mod = lmer(formula = BD ~ HCT + (1 | studyID), data = Complete_Leg_data)
 ys = predict(object = mod, newdata = data.frame(HCT=8:50, studyID=NA), re.form=NA)
 lines(8:50, ys, lwd=3, col='black')
-legend('topright', col=unique(Leg_data$studyID), legend = unique(Leg_data$studyID), pch=18, bg ='white') 
+#legend('topright', col=unique(Leg_data$studyID), legend = unique(Leg_data$studyID), pch=18, bg ='white') 
 
 ## Parasitaemia and Anaemia
 plot(jitter(Leg_data$HCT,amount=1), Leg_data$LPAR_pct, 
@@ -142,7 +142,7 @@ Before fitting the more complex GAM models we explore the standard glm (logistic
 ```{r deathmodel_glm}
 mod_full = glmer(outcome ~ HCT + LPAR_pct + AgeInYear + coma + convulsions +
                    poedema + BUN + BD + drug_AS + (1 | studyID),
-               data=Complete_Leg_data, family=binomial)
+               data = Complete_Leg_data, family=binomial)
 summary(mod_full)
 ```
 
@@ -168,7 +168,7 @@ The way to interpret this `counterfactual' plot is as follows: suppose that ever
 
 ```{r}
 plot(x_hcts,probs_lin[2,], xlim=c(4,45), ylab='Predicted probability of death', 
-     xlab='Haematocrit (%)', ylim=c(0,30), lty=1, lwd=3, type='l')
+     xlab='Haematocrit (%)', ylim=c(0,20), lty=1, lwd=3, type='l')
 lines(x_hcts, probs_lin[1,], lty=2, lwd=2)
 lines(x_hcts, probs_lin[3,], lty=2, lwd=2)
 abline(h=overall_median_mortality, lwd=3, col='blue',lty=2)
@@ -182,10 +182,12 @@ legend('topleft', col=c('black','black','blue'), lwd=3, lty=c(1,2,2),
 The GAM model allows for non-linear relationships between certain variables and the outcome.
 
 Here we fit as non-linear the effect of age and haematocrit on mortality.
+We add a random effect term for the studyID
+We should also be doing this for the study site...
 
 ```{r deathmodel_GAM}
 mod_full_GAM = gam(outcome ~ s(HCT,AgeInYear) + LPAR_pct  + coma + convulsions +
-                   poedema + BUN + BD + drug_AS,
+                   poedema + BUN + BD + drug_AS + s(studyID, bs='re'),
                data=Complete_Leg_data, family=binomial)
 summary(mod_full_GAM)
 ```
@@ -200,7 +202,7 @@ probs_gam = array(dim = c(3, length(x_hcts)))
 for(i in 1:length(x_hcts)){
   mydata = Complete_Leg_data
   mydata$HCT=x_hcts[i]
-  ys = 100*predict(mod_full_GAM, newdata = mydata, re.form=NA, type='response')
+  ys = 100*predict(mod_full_GAM, newdata = mydata, type='response')
   probs_gam[,i] = quantile(ys, probs=myquantiles)
 }
 ```
