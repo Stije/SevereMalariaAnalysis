@@ -104,32 +104,35 @@ par(las=1, mfrow=c(2,2), mar=c(4,4,1,1), bty='n')
 ## Base Excess and HCT
 plot(jitter(Leg_data$HCT,amount=1), jitter(Leg_data$BD), 
      col=Leg_data$studyID, pch='*', xlab='Haematocrit (%)', ylab='Base Deficit')
-mod = lmer(formula = BD ~ HCT + (1 | studyID), data = Complete_Leg_data)
-ys = predict(object = mod, newdata = data.frame(HCT=8:50, studyID=NA), re.form=NA)
+mod_HCT_BD = lmer(formula = BD ~ HCT + (1 | studyID), data = Complete_Leg_data)
+summary(mod_HCT_BD)
+ys = predict(object = mod_HCT_BD, newdata = data.frame(HCT=8:50, studyID=NA), re.form=NA)
 lines(8:50, ys, lwd=3, col='black')
-#legend('topright', col=unique(Leg_data$studyID), legend = unique(Leg_data$studyID), pch=18, bg ='white') 
 
 ## Parasitaemia and Anaemia
 plot(jitter(Leg_data$HCT,amount=1), Leg_data$LPAR_pct, 
      col=Leg_data$studyID, pch='*', xlab='Haematocrit (%)', ylab='Log10 % parasitised RBCs')
-#legend('topright', col=unique(Leg_data$studyID), legend = unique(Leg_data$studyID), pch='*')
-mod = lmer(formula = LPAR_pct ~ HCT + (1 | studyID), data = Complete_Leg_data)
-ys = predict(object = mod, newdata = data.frame(HCT=8:50, studyID=NA), re.form=NA)
+mod_HCT_LPAR = lmer(formula = LPAR_pct ~ HCT + (1 | studyID), data = Complete_Leg_data)
+summary(mod_HCT_LPAR)
+ys = predict(object = mod_HCT_LPAR, newdata = data.frame(HCT=8:50, studyID=NA), re.form=NA)
 lines(8:50, ys, lwd=3, col='black')
+
 ## BUN and BD
-plot(jitter(Leg_data$BUN,amount=1), jitter(Leg_data$BD), 
-     col=Leg_data$studyID, pch='*', xlab='Blood Urea Nitrogen', ylab='Base Deficit')
-#legend('topright', col=unique(Leg_data$studyID), legend = unique(Leg_data$studyID), pch='*')
-mod = lmer(formula = BD ~ BUN + (1 | studyID), data = Complete_Leg_data)
-ys = predict(object = mod, newdata = data.frame(BUN=5:140, studyID=NA), re.form=NA)
-lines(5:140, ys, lwd=3, col='black')
+plot(jitter(log10(Leg_data$BUN),amount=.1), jitter(Leg_data$BD), 
+     col=Leg_data$studyID, pch='*', xlab='Blood Urea Nitrogen (mmol/L)', 
+     ylab='Base Deficit', xaxt='n')
+axis(1, at=c(log10(2), 1, 2), labels = c(2,10,100))
+mod_BUN_BD = lmer(formula = BD ~ log10(BUN) + (1 | studyID), data = Complete_Leg_data)
+summary(mod_BUN_BD)
+ys = predict(object = mod_BUN_BD, newdata = data.frame(BUN=2:166, studyID=NA), re.form=NA)
+lines(log10(2:166), ys, lwd=3, col='black')
 
 ## Parasitaemia and Anaemia
 plot(jitter(Leg_data$AgeInYear,amount=1), Leg_data$HCT, 
      col=Leg_data$studyID, pch='*', xlab='Age in years', ylab='Haematocrit')
-#legend('topright', col=unique(Leg_data$studyID), legend = unique(Leg_data$studyID), pch='*')
-mod = lmer(formula = HCT ~ AgeInYear + (1 | studyID), data = Complete_Leg_data)
-ys = predict(object = mod, newdata = data.frame(AgeInYear=0:80, studyID=NA), re.form=NA)
+mod_Age_HCT = lmer(formula = HCT ~ AgeInYear + (1 | studyID), data = Complete_Leg_data)
+summary(mod_Age_HCT)
+ys = predict(object = mod_Age_HCT, newdata = data.frame(AgeInYear=0:80, studyID=NA), re.form=NA)
 lines(0:80, ys, lwd=3, col='black')
 ```
 
@@ -140,10 +143,10 @@ lines(0:80, ys, lwd=3, col='black')
 Before fitting the more complex GAM models we explore the standard glm (logistic regression) models.
 
 ```{r deathmodel_glm}
-mod_full = glmer(outcome ~ HCT + LPAR_pct + AgeInYear + coma + convulsions +
-                   poedema + BUN + BD + drug_AS + (1 | studyID),
+mod_full_GLM = glmer(outcome ~ HCT + LPAR_pct + AgeInYear + coma + convulsions +
+                   poedema + log10(BUN) + BD + drug_AS + (1 | studyID),
                data = Complete_Leg_data, family=binomial)
-summary(mod_full)
+summary(mod_full_GLM)
 ```
 
 Now let's make counterfactual predictions of anaemia on death for the patients in the database.
@@ -152,14 +155,14 @@ Now let's make counterfactual predictions of anaemia on death for the patients i
 ```{r counterfactualMortality}
 myquantiles = c(0.25,0.5,0.75) # this is 50% predictive interval
 
-overall_median_mortality = median(100*predict(mod_full, type='response'))
+overall_median_mortality = median(100*predict(mod_full_GLM, type='response'))
 par(las=1, bty='n')
 x_hcts = seq(4,45, by=1)
 probs_lin = array(dim = c(3, length(x_hcts)))
 for(i in 1:length(x_hcts)){
   mydata = Complete_Leg_data
   mydata$HCT=x_hcts[i]
-  ys = 100*predict(mod_full, newdata = mydata, re.form=NA, type='response')
+  ys = 100*predict(mod_full_GLM, newdata = mydata, re.form=NA, type='response')
   probs_lin[,i] = quantile(ys, probs=myquantiles)
 }
 ```
@@ -187,7 +190,7 @@ We should also be doing this for the study site...
 
 ```{r deathmodel_GAM}
 mod_full_GAM = gam(outcome ~ s(HCT,AgeInYear) + LPAR_pct  + coma + convulsions +
-                   poedema + BUN + BD + drug_AS + s(studyID, bs='re'),
+                   poedema + log10(BUN) + BD + drug_AS + s(studyID, bs='re'),
                data=Complete_Leg_data, family=binomial)
 summary(mod_full_GAM)
 ```
@@ -227,3 +230,19 @@ lines(x_hcts, probs_gam[3,], lty=2, lwd=2)
 abline(h=overall_median_mortalityGAM, lwd=3, col='blue',lty=2)
 title('Generalised additive model')
 ```
+
+
+## Model comparison
+
+Which model is better fit in terms of AIC
+
+```{r}
+print(AIC(mod_full_GAM, mod_full_GLM))
+```
+
+And in terms of deviance
+
+```{r}
+print(list(deviance(mod_full_GLM), deviance(mod_full_GAM)))
+```
+

@@ -296,6 +296,115 @@ studies:
 
 Let's look at the key predictive variables. We use a random effects term
 to model differences between studies.
+
+\begin{verbatim}
+## Linear mixed model fit by REML ['lmerMod']
+## Formula: BD ~ HCT + (1 | studyID)
+##    Data: Complete_Leg_data
+## 
+## REML criterion at convergence: 40270.2
+## 
+## Scaled residuals: 
+##     Min      1Q  Median      3Q     Max 
+## -4.2718 -0.6533 -0.1155  0.4845  4.4633 
+## 
+## Random effects:
+##  Groups   Name        Variance Std.Dev.
+##  studyID  (Intercept)  1.366   1.169   
+##  Residual             43.095   6.565   
+## Number of obs: 6097, groups:  studyID, 6
+## 
+## Fixed effects:
+##              Estimate Std. Error t value
+## (Intercept) 10.736827   0.564028   19.04
+## HCT         -0.148243   0.009565  -15.50
+## 
+## Correlation of Fixed Effects:
+##     (Intr)
+## HCT -0.462
+\end{verbatim}
+
+\begin{verbatim}
+## Linear mixed model fit by REML ['lmerMod']
+## Formula: LPAR_pct ~ HCT + (1 | studyID)
+##    Data: Complete_Leg_data
+## 
+## REML criterion at convergence: 13843.7
+## 
+## Scaled residuals: 
+##     Min      1Q  Median      3Q     Max 
+## -4.6726 -0.5624  0.1636  0.7317  2.5347 
+## 
+## Random effects:
+##  Groups   Name        Variance Std.Dev.
+##  studyID  (Intercept) 0.07889  0.2809  
+##  Residual             0.56353  0.7507  
+## Number of obs: 6097, groups:  studyID, 6
+## 
+## Fixed effects:
+##              Estimate Std. Error t value
+## (Intercept)  0.688655   0.119797   5.749
+## HCT         -0.005186   0.001097  -4.730
+## 
+## Correlation of Fixed Effects:
+##     (Intr)
+## HCT -0.250
+\end{verbatim}
+
+\begin{verbatim}
+## Linear mixed model fit by REML ['lmerMod']
+## Formula: BD ~ log10(BUN) + (1 | studyID)
+##    Data: Complete_Leg_data
+## 
+## REML criterion at convergence: 39409.7
+## 
+## Scaled residuals: 
+##     Min      1Q  Median      3Q     Max 
+## -5.3679 -0.6217 -0.1011  0.5030  4.9640 
+## 
+## Random effects:
+##  Groups   Name        Variance Std.Dev.
+##  studyID  (Intercept)  9.535   3.088   
+##  Residual             37.400   6.116   
+## Number of obs: 6097, groups:  studyID, 6
+## 
+## Fixed effects:
+##             Estimate Std. Error t value
+## (Intercept)  -6.2579     1.3229   -4.73
+## log10(BUN)    8.9224     0.2581   34.57
+## 
+## Correlation of Fixed Effects:
+##            (Intr)
+## log10(BUN) -0.283
+\end{verbatim}
+
+\begin{verbatim}
+## Linear mixed model fit by REML ['lmerMod']
+## Formula: HCT ~ AgeInYear + (1 | studyID)
+##    Data: Complete_Leg_data
+## 
+## REML criterion at convergence: 43682.7
+## 
+## Scaled residuals: 
+##     Min      1Q  Median      3Q     Max 
+## -3.0759 -0.7518 -0.0554  0.6999  3.5504 
+## 
+## Random effects:
+##  Groups   Name        Variance Std.Dev.
+##  studyID  (Intercept)  7.884   2.808   
+##  Residual             75.364   8.681   
+## Number of obs: 6097, groups:  studyID, 6
+## 
+## Fixed effects:
+##             Estimate Std. Error t value
+## (Intercept) 24.33535    1.19322   20.39
+## AgeInYear    0.13029    0.01157   11.26
+## 
+## Correlation of Fixed Effects:
+##           (Intr)
+## AgeInYear -0.220
+\end{verbatim}
+
 \includegraphics{LegacyAnalysis_files/figure-latex/ExploratoryPlots-1.pdf}
 
 \section{Predictive value of anaemia on death adjusting for
@@ -306,20 +415,21 @@ Before fitting the more complex GAM models we explore the standard glm
 
 \begin{Shaded}
 \begin{Highlighting}[]
-\NormalTok{mod_full =}\StringTok{ }\KeywordTok{glmer}\NormalTok{(outcome }\OperatorTok{~}\StringTok{ }\NormalTok{HCT }\OperatorTok{+}\StringTok{ }\NormalTok{LPAR_pct }\OperatorTok{+}\StringTok{ }\NormalTok{AgeInYear }\OperatorTok{+}\StringTok{ }\NormalTok{coma }\OperatorTok{+}\StringTok{ }\NormalTok{convulsions }\OperatorTok{+}
-\StringTok{                   }\NormalTok{poedema }\OperatorTok{+}\StringTok{ }\NormalTok{BUN }\OperatorTok{+}\StringTok{ }\NormalTok{BD }\OperatorTok{+}\StringTok{ }\NormalTok{drug_AS }\OperatorTok{+}\StringTok{ }\NormalTok{(}\DecValTok{1} \OperatorTok{|}\StringTok{ }\NormalTok{studyID),}
-               \DataTypeTok{data=}\NormalTok{Complete_Leg_data, }\DataTypeTok{family=}\NormalTok{binomial)}
+\NormalTok{mod_full_GLM =}\StringTok{ }\KeywordTok{glmer}\NormalTok{(outcome }\OperatorTok{~}\StringTok{ }\NormalTok{HCT }\OperatorTok{+}\StringTok{ }\NormalTok{LPAR_pct }\OperatorTok{+}\StringTok{ }\NormalTok{AgeInYear }\OperatorTok{+}\StringTok{ }\NormalTok{coma }\OperatorTok{+}\StringTok{ }\NormalTok{convulsions }\OperatorTok{+}
+\StringTok{                   }\NormalTok{poedema }\OperatorTok{+}\StringTok{ }\KeywordTok{log10}\NormalTok{(BUN) }\OperatorTok{+}\StringTok{ }\NormalTok{BD }\OperatorTok{+}\StringTok{ }\NormalTok{drug_AS }\OperatorTok{+}\StringTok{ }\NormalTok{(}\DecValTok{1} \OperatorTok{|}\StringTok{ }\NormalTok{studyID),}
+               \DataTypeTok{data =}\NormalTok{ Complete_Leg_data, }\DataTypeTok{family=}\NormalTok{binomial)}
 \end{Highlighting}
 \end{Shaded}
 
 \begin{verbatim}
-## Warning in checkConv(attr(opt, "derivs"), opt$par, ctrl = control$checkConv, : Model is nearly unidentifiable: very large eigenvalue
-##  - Rescale variables?
+## Warning in checkConv(attr(opt, "derivs"), opt$par, ctrl = control
+## $checkConv, : Model failed to converge with max|grad| = 0.00332676 (tol =
+## 0.001, component 1)
 \end{verbatim}
 
 \begin{Shaded}
 \begin{Highlighting}[]
-\KeywordTok{summary}\NormalTok{(mod_full)}
+\KeywordTok{summary}\NormalTok{(mod_full_GLM)}
 \end{Highlighting}
 \end{Shaded}
 
@@ -329,50 +439,49 @@ Before fitting the more complex GAM models we explore the standard glm
 ##  Family: binomial  ( logit )
 ## Formula: 
 ## outcome ~ HCT + LPAR_pct + AgeInYear + coma + convulsions + poedema +  
-##     BUN + BD + drug_AS + (1 | studyID)
+##     log10(BUN) + BD + drug_AS + (1 | studyID)
 ##    Data: Complete_Leg_data
 ## 
 ##      AIC      BIC   logLik deviance df.resid 
-##   3544.7   3618.6  -1761.4   3522.7     6086 
+##   3517.3   3591.2  -1747.7   3495.3     6086 
 ## 
 ## Scaled residuals: 
 ##     Min      1Q  Median      3Q     Max 
-## -5.9680 -0.3455 -0.2028 -0.1256 11.1231 
+## -4.6301 -0.3453 -0.1991 -0.1135 13.4583 
 ## 
 ## Random effects:
 ##  Groups  Name        Variance Std.Dev.
-##  studyID (Intercept) 0.01816  0.1347  
+##  studyID (Intercept) 0.01538  0.124   
 ## Number of obs: 6097, groups:  studyID, 6
 ## 
 ## Fixed effects:
 ##               Estimate Std. Error z value Pr(>|z|)    
-## (Intercept)  -4.974463   0.212231 -23.439  < 2e-16 ***
-## HCT           0.015164   0.005220   2.905 0.003673 ** 
-## LPAR_pct      0.050297   0.059974   0.839 0.401669    
-## AgeInYear     0.018937   0.003815   4.963 6.92e-07 ***
-## coma          1.413238   0.097151  14.547  < 2e-16 ***
-## convulsions1  0.469218   0.111356   4.214 2.51e-05 ***
-## poedema1      0.771794   0.371709   2.076 0.037863 *  
-## BUN           0.014147   0.001574   8.985  < 2e-16 ***
-## BD            0.129146   0.007000  18.449  < 2e-16 ***
-## drug_AS      -0.324270   0.089117  -3.639 0.000274 ***
+## (Intercept)  -6.684523   0.290160 -23.037  < 2e-16 ***
+## HCT           0.014509   0.005198   2.791 0.005255 ** 
+## LPAR_pct      0.025881   0.060318   0.429 0.667867    
+## AgeInYear     0.016073   0.003694   4.351 1.36e-05 ***
+## coma          1.367891   0.098267  13.920  < 2e-16 ***
+## convulsions1  0.533741   0.112813   4.731 2.23e-06 ***
+## poedema1      0.741742   0.370003   2.005 0.044996 *  
+## log10(BUN)    1.654044   0.160767  10.288  < 2e-16 ***
+## BD            0.123580   0.007105  17.394  < 2e-16 ***
+## drug_AS      -0.334685   0.089278  -3.749 0.000178 ***
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
 ## Correlation of Fixed Effects:
-##             (Intr) HCT    LPAR_p AgInYr coma   cnvls1 poedm1 BUN    BD    
-## HCT         -0.667                                                        
-## LPAR_pct    -0.096  0.008                                                 
-## AgeInYear   -0.246 -0.114 -0.060                                          
-## coma        -0.244 -0.066  0.062 -0.073                                   
-## convulsins1 -0.054 -0.075  0.036  0.102 -0.243                            
-## poedema1    -0.010 -0.005 -0.005 -0.089  0.012  0.006                     
-## BUN         -0.238  0.116 -0.059 -0.155  0.006  0.048 -0.021              
-## BD          -0.435  0.223 -0.170  0.164  0.001  0.062  0.022 -0.204       
-## drug_AS     -0.165 -0.011 -0.017 -0.072 -0.005  0.001 -0.024 -0.052 -0.013
+##             (Intr) HCT    LPAR_p AgInYr coma   cnvls1 poedm1 l10(BU BD    
+## HCT         -0.510                                                        
+## LPAR_pct    -0.027 -0.005                                                 
+## AgeInYear    0.018 -0.143 -0.060                                          
+## coma        -0.149 -0.083  0.081 -0.093                                   
+## convulsins1 -0.122 -0.055  0.020  0.116 -0.252                            
+## poedema1     0.009 -0.012  0.003 -0.101  0.025 -0.001                     
+## log10(BUN)  -0.722  0.086 -0.082 -0.238 -0.045  0.116 -0.031              
+## BD          -0.193  0.235 -0.174  0.215 -0.004  0.047  0.018 -0.216       
+## drug_AS     -0.086 -0.017 -0.011 -0.077  0.007 -0.009 -0.021 -0.060 -0.020
 ## convergence code: 0
-## Model is nearly unidentifiable: very large eigenvalue
-##  - Rescale variables?
+## Model failed to converge with max|grad| = 0.00332676 (tol = 0.001, component 1)
 \end{verbatim}
 
 Now let's make counterfactual predictions of anaemia on death for the
@@ -382,14 +491,14 @@ patients in the database.
 \begin{Highlighting}[]
 \NormalTok{myquantiles =}\StringTok{ }\KeywordTok{c}\NormalTok{(}\FloatTok{0.25}\NormalTok{,}\FloatTok{0.5}\NormalTok{,}\FloatTok{0.75}\NormalTok{) }\CommentTok{# this is 50% predictive interval}
 
-\NormalTok{overall_median_mortality =}\StringTok{ }\KeywordTok{median}\NormalTok{(}\DecValTok{100}\OperatorTok{*}\KeywordTok{predict}\NormalTok{(mod_full, }\DataTypeTok{type=}\StringTok{'response'}\NormalTok{))}
+\NormalTok{overall_median_mortality =}\StringTok{ }\KeywordTok{median}\NormalTok{(}\DecValTok{100}\OperatorTok{*}\KeywordTok{predict}\NormalTok{(mod_full_GLM, }\DataTypeTok{type=}\StringTok{'response'}\NormalTok{))}
 \KeywordTok{par}\NormalTok{(}\DataTypeTok{las=}\DecValTok{1}\NormalTok{, }\DataTypeTok{bty=}\StringTok{'n'}\NormalTok{)}
 \NormalTok{x_hcts =}\StringTok{ }\KeywordTok{seq}\NormalTok{(}\DecValTok{4}\NormalTok{,}\DecValTok{45}\NormalTok{, }\DataTypeTok{by=}\DecValTok{1}\NormalTok{)}
 \NormalTok{probs_lin =}\StringTok{ }\KeywordTok{array}\NormalTok{(}\DataTypeTok{dim =} \KeywordTok{c}\NormalTok{(}\DecValTok{3}\NormalTok{, }\KeywordTok{length}\NormalTok{(x_hcts)))}
 \ControlFlowTok{for}\NormalTok{(i }\ControlFlowTok{in} \DecValTok{1}\OperatorTok{:}\KeywordTok{length}\NormalTok{(x_hcts))\{}
 \NormalTok{  mydata =}\StringTok{ }\NormalTok{Complete_Leg_data}
 \NormalTok{  mydata}\OperatorTok{$}\NormalTok{HCT=x_hcts[i]}
-\NormalTok{  ys =}\StringTok{ }\DecValTok{100}\OperatorTok{*}\KeywordTok{predict}\NormalTok{(mod_full, }\DataTypeTok{newdata =}\NormalTok{ mydata, }\DataTypeTok{re.form=}\OtherTok{NA}\NormalTok{, }\DataTypeTok{type=}\StringTok{'response'}\NormalTok{)}
+\NormalTok{  ys =}\StringTok{ }\DecValTok{100}\OperatorTok{*}\KeywordTok{predict}\NormalTok{(mod_full_GLM, }\DataTypeTok{newdata =}\NormalTok{ mydata, }\DataTypeTok{re.form=}\OtherTok{NA}\NormalTok{, }\DataTypeTok{type=}\StringTok{'response'}\NormalTok{)}
 \NormalTok{  probs_lin[,i] =}\StringTok{ }\KeywordTok{quantile}\NormalTok{(ys, }\DataTypeTok{probs=}\NormalTok{myquantiles)}
 \NormalTok{\}}
 \end{Highlighting}
@@ -427,7 +536,7 @@ doing this for the study site\ldots{}
 \begin{Shaded}
 \begin{Highlighting}[]
 \NormalTok{mod_full_GAM =}\StringTok{ }\KeywordTok{gam}\NormalTok{(outcome }\OperatorTok{~}\StringTok{ }\KeywordTok{s}\NormalTok{(HCT,AgeInYear) }\OperatorTok{+}\StringTok{ }\NormalTok{LPAR_pct  }\OperatorTok{+}\StringTok{ }\NormalTok{coma }\OperatorTok{+}\StringTok{ }\NormalTok{convulsions }\OperatorTok{+}
-\StringTok{                   }\NormalTok{poedema }\OperatorTok{+}\StringTok{ }\NormalTok{BUN }\OperatorTok{+}\StringTok{ }\NormalTok{BD }\OperatorTok{+}\StringTok{ }\NormalTok{drug_AS }\OperatorTok{+}\StringTok{ }\KeywordTok{s}\NormalTok{(studyID, }\DataTypeTok{bs=}\StringTok{'re'}\NormalTok{),}
+\StringTok{                   }\NormalTok{poedema }\OperatorTok{+}\StringTok{ }\KeywordTok{log10}\NormalTok{(BUN) }\OperatorTok{+}\StringTok{ }\NormalTok{BD }\OperatorTok{+}\StringTok{ }\NormalTok{drug_AS }\OperatorTok{+}\StringTok{ }\KeywordTok{s}\NormalTok{(studyID, }\DataTypeTok{bs=}\StringTok{'re'}\NormalTok{),}
                \DataTypeTok{data=}\NormalTok{Complete_Leg_data, }\DataTypeTok{family=}\NormalTok{binomial)}
 \KeywordTok{summary}\NormalTok{(mod_full_GAM)}
 \end{Highlighting}
@@ -440,30 +549,30 @@ doing this for the study site\ldots{}
 ## 
 ## Formula:
 ## outcome ~ s(HCT, AgeInYear) + LPAR_pct + coma + convulsions + 
-##     poedema + BUN + BD + drug_AS + s(studyID, bs = "re")
+##     poedema + log10(BUN) + BD + drug_AS + s(studyID, bs = "re")
 ## 
 ## Parametric coefficients:
 ##               Estimate Std. Error z value Pr(>|z|)    
-## (Intercept)  -4.397435   0.135968 -32.342  < 2e-16 ***
-## LPAR_pct      0.050612   0.059250   0.854 0.392986    
-## coma          1.400706   0.096829  14.466  < 2e-16 ***
-## convulsions1  0.510489   0.111814   4.566 4.98e-06 ***
-## poedema1      0.748149   0.366194   2.043 0.041048 *  
-## BUN           0.013114   0.001601   8.192 2.57e-16 ***
-## BD            0.132736   0.007276  18.243  < 2e-16 ***
-## drug_AS      -0.332430   0.088940  -3.738 0.000186 ***
+## (Intercept)  -6.071683   0.260934 -23.269  < 2e-16 ***
+## LPAR_pct      0.031316   0.059610   0.525 0.599343    
+## coma          1.371608   0.097356  14.089  < 2e-16 ***
+## convulsions1  0.553654   0.113722   4.868 1.12e-06 ***
+## poedema1      0.750426   0.368134   2.038 0.041504 *  
+## log10(BUN)    1.555950   0.164804   9.441  < 2e-16 ***
+## BD            0.125944   0.007354  17.126  < 2e-16 ***
+## drug_AS      -0.336923   0.089442  -3.767 0.000165 ***
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
 ## Approximate significance of smooth terms:
 ##                    edf Ref.df Chi.sq  p-value    
-## s(HCT,AgeInYear) 6.846  9.561 73.442 8.24e-12 ***
-## s(studyID)       1.172  5.000  1.505    0.252    
+## s(HCT,AgeInYear) 5.869  8.205 41.856 1.88e-06 ***
+## s(studyID)       2.394  5.000  4.198    0.117    
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
-## R-sq.(adj) =  0.251   Deviance explained = 26.7%
-## UBRE = -0.42123  Scale est. = 1         n = 6097
+## R-sq.(adj) =  0.254   Deviance explained = 27.2%
+## UBRE = -0.42495  Scale est. = 1         n = 6097
 \end{verbatim}
 
 Now we compute the corresponding counterfactual probabilities of death
@@ -508,6 +617,38 @@ this model: below 20 is protective, above 20 plateaus out:
 \end{Shaded}
 
 \includegraphics{LegacyAnalysis_files/figure-latex/counterfactualPlots-1.pdf}
+
+\subsection{Model comparison}\label{model-comparison}
+
+Which model is better fit in terms of AIC
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{print}\NormalTok{(}\KeywordTok{AIC}\NormalTok{(mod_full_GAM, mod_full_GLM))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##                    df      AIC
+## mod_full_GAM 16.26342 3506.094
+## mod_full_GLM 11.00000 3517.329
+\end{verbatim}
+
+And in terms of deviance
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{print}\NormalTok{(}\KeywordTok{list}\NormalTok{(}\KeywordTok{deviance}\NormalTok{(mod_full_GLM), }\KeywordTok{deviance}\NormalTok{(mod_full_GAM)))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [[1]]
+## [1] 3488.172
+## 
+## [[2]]
+## [1] 3473.568
+\end{verbatim}
 
 
 \end{document}
