@@ -243,6 +243,6 @@ print(AIC(mod_full_GAM, mod_full_GLM))
 And in terms of deviance
 
 ```{r}
-print(list(deviance(mod_full_GLM), deviance(mod_full_GAM)))
+print(list(mod_full_GLM = deviance(mod_full_GLM), mod_full_GAM=deviance(mod_full_GAM)))
 ```
 
