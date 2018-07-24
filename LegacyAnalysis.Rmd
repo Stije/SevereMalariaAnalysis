@@ -45,7 +45,7 @@ Impute base deficit from bicarbonate
 ```{r}
 BD_and_bicarbonate = !is.na(Leg_data$BD) & !is.na(Leg_data$bicarbonate)
 print(paste('We have ', sum(BD_and_bicarbonate), 'observations for both bicarbonate and base deficit'))
-mod_impute1 = lmer(BD ~ bicarbonate + (1 | studyID), data= Leg_data[BD_and_bicarbonate,])
+mod_impute1 = lmer(BD ~ bicarbonate + (1 | studyID) + (1 | country), data= Leg_data[BD_and_bicarbonate,])
 missing_BD = is.na(Leg_data$BD)
 Available_Bicarbonate = !is.na(Leg_data$bicarbonate)
 print(paste(sum(missing_BD & Available_Bicarbonate), 'observations will now be imputed'))
@@ -114,6 +114,24 @@ Complete_Leg_data = Complete_Leg_data[ind_keep,]
 
 # Exploratory analysis
 
+```{r}
+for(s in unique(Complete_Leg_data$studyID)){
+  print(paste(s, ', mortality of:', round(100*mean(Complete_Leg_data$outcome[Complete_Leg_data$studyID==s])),'%'))
+}
+```
+
+```{r}
+for(s in unique(Complete_Leg_data$studyID)){
+  print(paste0(s, ', ages:', round(quantile(Complete_Leg_data$AgeInYear[Complete_Leg_data$studyID==s], probs = c(0,.5,1))), collapse = ''))
+}
+
+for(s in unique(Complete_Leg_data$studyID)){
+  print(s)
+  print(table(Complete_Leg_data$drug[Complete_Leg_data$studyID==s]))
+}
+```
+
+
 Let's look at the key predictive variables. We use a random effects term to model differences between studies.
 ```{r ExploratoryPlots, echo=FALSE}
 par(las=1, mfrow=c(2,2), mar=c(4,4,1,1), bty='n')
@@ -159,6 +177,7 @@ lines(0:80, ys, lwd=3, col='black')
 Before fitting the more complex GAM models we explore the standard glm (logistic regression) models.
 
 ```{r deathmodel_glm}
+Complete_Leg_data$country=as.factor(Complete_Leg_data$country)
 mod_full_GLM = glmer(outcome ~ HCT + LPAR_pct + AgeInYear + coma + convulsions +
                        poedema + log10(BUN) + BD + drug_AS + 
                        (1 | studyID) + (1 | country),
@@ -206,9 +225,11 @@ We add a random effect term for the studyID
 We should also be doing this for the study site...
 
 ```{r deathmodel_GAM}
+
 mod_full_GAM = gam(outcome ~ s(HCT,AgeInYear) + LPAR_pct  + coma + convulsions +
                      poedema + log10(BUN) + BD + drug_AS + 
-                     s(studyID, bs='re'),data=Complete_Leg_data, family=binomial)
+                     s(studyID, bs='re') + s(country, bs='re'),
+                   data=Complete_Leg_data, family=binomial)
 summary(mod_full_GAM)
 ```
 

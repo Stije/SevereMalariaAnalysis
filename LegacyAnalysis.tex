@@ -162,7 +162,7 @@ Impute base deficit from bicarbonate
 
 \begin{Shaded}
 \begin{Highlighting}[]
-\NormalTok{mod_impute1 =}\StringTok{ }\KeywordTok{lmer}\NormalTok{(BD }\OperatorTok{~}\StringTok{ }\NormalTok{bicarbonate }\OperatorTok{+}\StringTok{ }\NormalTok{(}\DecValTok{1} \OperatorTok{|}\StringTok{ }\NormalTok{studyID), }\DataTypeTok{data=}\NormalTok{ Leg_data[BD_and_bicarbonate,])}
+\NormalTok{mod_impute1 =}\StringTok{ }\KeywordTok{lmer}\NormalTok{(BD }\OperatorTok{~}\StringTok{ }\NormalTok{bicarbonate }\OperatorTok{+}\StringTok{ }\NormalTok{(}\DecValTok{1} \OperatorTok{|}\StringTok{ }\NormalTok{studyID) }\OperatorTok{+}\StringTok{ }\NormalTok{(}\DecValTok{1} \OperatorTok{|}\StringTok{ }\NormalTok{country), }\DataTypeTok{data=}\NormalTok{ Leg_data[BD_and_bicarbonate,])}
 \NormalTok{missing_BD =}\StringTok{ }\KeywordTok{is.na}\NormalTok{(Leg_data}\OperatorTok{$}\NormalTok{BD)}
 \NormalTok{Available_Bicarbonate =}\StringTok{ }\OperatorTok{!}\KeywordTok{is.na}\NormalTok{(Leg_data}\OperatorTok{$}\NormalTok{bicarbonate)}
 \KeywordTok{print}\NormalTok{(}\KeywordTok{paste}\NormalTok{(}\KeywordTok{sum}\NormalTok{(missing_BD }\OperatorTok{&}\StringTok{ }\NormalTok{Available_Bicarbonate), }\StringTok{'observations will now be imputed'}\NormalTok{))}
@@ -332,6 +332,76 @@ studies:
 
 \section{Exploratory analysis}\label{exploratory-analysis}
 
+\begin{Shaded}
+\begin{Highlighting}[]
+\ControlFlowTok{for}\NormalTok{(s }\ControlFlowTok{in} \KeywordTok{unique}\NormalTok{(Complete_Leg_data}\OperatorTok{$}\NormalTok{studyID))\{}
+  \KeywordTok{print}\NormalTok{(}\KeywordTok{paste}\NormalTok{(s, }\StringTok{', mortality of:'}\NormalTok{, }\KeywordTok{round}\NormalTok{(}\DecValTok{100}\OperatorTok{*}\KeywordTok{mean}\NormalTok{(Complete_Leg_data}\OperatorTok{$}\NormalTok{outcome[Complete_Leg_data}\OperatorTok{$}\NormalTok{studyID}\OperatorTok{==}\NormalTok{s])),}\StringTok{'%'}\NormalTok{))}
+\NormalTok{\}}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] "Core Malaria , mortality of: 23 %"
+## [1] "AQGambia , mortality of: 12 %"
+## [1] "AAV , mortality of: 12 %"
+## [1] "SEAQUAMAT , mortality of: 18 %"
+## [1] "AQUAMAT , mortality of: 9 %"
+## [1] "AQ , mortality of: 23 %"
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\ControlFlowTok{for}\NormalTok{(s }\ControlFlowTok{in} \KeywordTok{unique}\NormalTok{(Complete_Leg_data}\OperatorTok{$}\NormalTok{studyID))\{}
+  \KeywordTok{print}\NormalTok{(}\KeywordTok{paste0}\NormalTok{(s, }\StringTok{', ages:'}\NormalTok{, }\KeywordTok{round}\NormalTok{(}\KeywordTok{quantile}\NormalTok{(Complete_Leg_data}\OperatorTok{$}\NormalTok{AgeInYear[Complete_Leg_data}\OperatorTok{$}\NormalTok{studyID}\OperatorTok{==}\NormalTok{s], }\DataTypeTok{probs =} \KeywordTok{c}\NormalTok{(}\DecValTok{0}\NormalTok{,.}\DecValTok{5}\NormalTok{,}\DecValTok{1}\NormalTok{))), }\DataTypeTok{collapse =} \StringTok{''}\NormalTok{))}
+\NormalTok{\}}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] "Core Malaria, ages:1Core Malaria, ages:27Core Malaria, ages:75"
+## [1] "AQGambia, ages:1AQGambia, ages:4AQGambia, ages:9"
+## [1] "AAV, ages:15AAV, ages:34AAV, ages:77"
+## [1] "SEAQUAMAT, ages:2SEAQUAMAT, ages:25SEAQUAMAT, ages:87"
+## [1] "AQUAMAT, ages:0AQUAMAT, ages:2AQUAMAT, ages:78"
+## [1] "AQ, ages:15AQ, ages:30AQ, ages:74"
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\ControlFlowTok{for}\NormalTok{(s }\ControlFlowTok{in} \KeywordTok{unique}\NormalTok{(Complete_Leg_data}\OperatorTok{$}\NormalTok{studyID))\{}
+  \KeywordTok{print}\NormalTok{(s)}
+  \KeywordTok{print}\NormalTok{(}\KeywordTok{table}\NormalTok{(Complete_Leg_data}\OperatorTok{$}\NormalTok{drug[Complete_Leg_data}\OperatorTok{$}\NormalTok{studyID}\OperatorTok{==}\NormalTok{s]))}
+\NormalTok{\}}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] "Core Malaria"
+## 
+##  Artemether  Artesunate Chloroquine  Mefloquine         NAC     Quinine 
+##          11         368           2           7           6         262 
+## [1] "AQGambia"
+## 
+## Artemether    Quinine 
+##         82         86 
+## [1] "AAV"
+## 
+## Artemether Artesunate 
+##        102        112 
+## [1] "SEAQUAMAT"
+## 
+## Artesunate    Quinine 
+##        645        628 
+## [1] "AQUAMAT"
+## 
+## Artesunate    Quinine 
+##       1837       1818 
+## [1] "AQ"
+## 
+## Artemether    Quinine 
+##         73         77
+\end{verbatim}
+
 Let's look at the key predictive variables. We use a random effects term
 to model differences between studies.
 
@@ -340,23 +410,23 @@ to model differences between studies.
 ## Formula: BD ~ HCT + (1 | studyID/country)
 ##    Data: Complete_Leg_data
 ## 
-## REML criterion at convergence: 40261.7
+## REML criterion at convergence: 40261.9
 ## 
 ## Scaled residuals: 
 ##     Min      1Q  Median      3Q     Max 
-## -4.4388 -0.6612 -0.1490  0.5229  4.7213 
+## -4.4421 -0.6612 -0.1488  0.5224  4.7209 
 ## 
 ## Random effects:
 ##  Groups          Name        Variance Std.Dev.
-##  country:studyID (Intercept)  2.6556  1.6296  
-##  studyID         (Intercept)  0.8296  0.9108  
-##  Residual                    41.8933  6.4725  
+##  country:studyID (Intercept)  2.6525  1.6286  
+##  studyID         (Intercept)  0.8373  0.9151  
+##  Residual                    41.8947  6.4726  
 ## Number of obs: 6116, groups:  country:studyID, 18; studyID, 6
 ## 
 ## Fixed effects:
 ##              Estimate Std. Error t value
-## (Intercept) 10.301660   0.652303   15.79
-## HCT         -0.133614   0.009699  -13.78
+## (Intercept) 10.339058   0.653393   15.82
+## HCT         -0.133548   0.009699  -13.77
 ## 
 ## Correlation of Fixed Effects:
 ##     (Intr)
@@ -396,27 +466,27 @@ to model differences between studies.
 ## Formula: BD ~ log10(BUN) + (1 | studyID/country)
 ##    Data: Complete_Leg_data
 ## 
-## REML criterion at convergence: 39236.4
+## REML criterion at convergence: 39236.2
 ## 
 ## Scaled residuals: 
 ##     Min      1Q  Median      3Q     Max 
-## -5.6060 -0.6375 -0.1039  0.5177  5.0755 
+## -5.6063 -0.6369 -0.1041  0.5191  5.0754 
 ## 
 ## Random effects:
 ##  Groups          Name        Variance Std.Dev.
-##  country:studyID (Intercept)  2.884   1.698   
-##  studyID         (Intercept)  6.937   2.634   
-##  Residual                    35.406   5.950   
+##  country:studyID (Intercept)  2.876   1.696   
+##  studyID         (Intercept)  6.858   2.619   
+##  Residual                    35.405   5.950   
 ## Number of obs: 6116, groups:  country:studyID, 18; studyID, 6
 ## 
 ## Fixed effects:
 ##             Estimate Std. Error t value
-## (Intercept)  -6.8923     1.2630   -5.46
-## log10(BUN)    9.3521     0.2559   36.54
+## (Intercept)  -6.8409     1.2574   -5.44
+## log10(BUN)    9.3530     0.2559   36.55
 ## 
 ## Correlation of Fixed Effects:
 ##            (Intr)
-## log10(BUN) -0.292
+## log10(BUN) -0.293
 \end{verbatim}
 
 \begin{verbatim}
@@ -457,6 +527,7 @@ Before fitting the more complex GAM models we explore the standard glm
 
 \begin{Shaded}
 \begin{Highlighting}[]
+\NormalTok{Complete_Leg_data}\OperatorTok{$}\NormalTok{country=}\KeywordTok{as.factor}\NormalTok{(Complete_Leg_data}\OperatorTok{$}\NormalTok{country)}
 \NormalTok{mod_full_GLM =}\StringTok{ }\KeywordTok{glmer}\NormalTok{(outcome }\OperatorTok{~}\StringTok{ }\NormalTok{HCT }\OperatorTok{+}\StringTok{ }\NormalTok{LPAR_pct }\OperatorTok{+}\StringTok{ }\NormalTok{AgeInYear }\OperatorTok{+}\StringTok{ }\NormalTok{coma }\OperatorTok{+}\StringTok{ }\NormalTok{convulsions }\OperatorTok{+}
 \StringTok{                       }\NormalTok{poedema }\OperatorTok{+}\StringTok{ }\KeywordTok{log10}\NormalTok{(BUN) }\OperatorTok{+}\StringTok{ }\NormalTok{BD }\OperatorTok{+}\StringTok{ }\NormalTok{drug_AS }\OperatorTok{+}\StringTok{ }
 \StringTok{                       }\NormalTok{(}\DecValTok{1} \OperatorTok{|}\StringTok{ }\NormalTok{studyID) }\OperatorTok{+}\StringTok{ }\NormalTok{(}\DecValTok{1} \OperatorTok{|}\StringTok{ }\NormalTok{country),}
@@ -466,7 +537,7 @@ Before fitting the more complex GAM models we explore the standard glm
 
 \begin{verbatim}
 ## Warning in checkConv(attr(opt, "derivs"), opt$par, ctrl = control
-## $checkConv, : Model failed to converge with max|grad| = 0.00249628 (tol =
+## $checkConv, : Model failed to converge with max|grad| = 0.00216998 (tol =
 ## 0.001, component 1)
 \end{verbatim}
 
@@ -490,26 +561,26 @@ Before fitting the more complex GAM models we explore the standard glm
 ## 
 ## Scaled residuals: 
 ##     Min      1Q  Median      3Q     Max 
-## -3.8771 -0.3318 -0.1918 -0.1084 15.4956 
+## -3.8745 -0.3319 -0.1918 -0.1083 15.4981 
 ## 
 ## Random effects:
 ##  Groups  Name        Variance  Std.Dev. 
-##  country (Intercept) 1.424e-01 3.773e-01
-##  studyID (Intercept) 3.756e-10 1.938e-05
+##  country (Intercept) 1.419e-01 3.767e-01
+##  studyID (Intercept) 2.272e-09 4.766e-05
 ## Number of obs: 6116, groups:  country, 16; studyID, 6
 ## 
 ## Fixed effects:
 ##               Estimate Std. Error z value Pr(>|z|)    
-## (Intercept)  -6.982735   0.303155 -23.034  < 2e-16 ***
-## HCT           0.016476   0.005281   3.120 0.001808 ** 
-## LPAR_pct      0.001698   0.060468   0.028 0.977596    
-## AgeInYear     0.013568   0.003817   3.554 0.000379 ***
-## coma          1.347017   0.100994  13.338  < 2e-16 ***
-## convulsions1  0.503005   0.116975   4.300 1.71e-05 ***
-## poedema1      0.547453   0.385255   1.421 0.155313    
-## log10(BUN)    1.780419   0.165788  10.739  < 2e-16 ***
-## BD            0.121068   0.007201  16.812  < 2e-16 ***
-## drug_AS      -0.343316   0.090329  -3.801 0.000144 ***
+## (Intercept)  -6.983607   0.303116 -23.039  < 2e-16 ***
+## HCT           0.016434   0.005280   3.113 0.001854 ** 
+## LPAR_pct      0.001461   0.060471   0.024 0.980728    
+## AgeInYear     0.013550   0.003816   3.551 0.000384 ***
+## coma          1.347163   0.100988  13.340  < 2e-16 ***
+## convulsions1  0.503538   0.116981   4.304 1.67e-05 ***
+## poedema1      0.544303   0.385069   1.414 0.157503    
+## log10(BUN)    1.779846   0.165792  10.735  < 2e-16 ***
+## BD            0.121095   0.007202  16.813  < 2e-16 ***
+## drug_AS      -0.343889   0.090333  -3.807 0.000141 ***
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
@@ -517,15 +588,15 @@ Before fitting the more complex GAM models we explore the standard glm
 ##             (Intr) HCT    LPAR_p AgInYr coma   cnvls1 poedm1 l10(BU BD    
 ## HCT         -0.487                                                        
 ## LPAR_pct    -0.046  0.030                                                 
-## AgeInYear    0.053 -0.181  0.003                                          
+## AgeInYear    0.053 -0.182  0.003                                          
 ## coma        -0.173 -0.028  0.077  0.001                                   
 ## convulsins1 -0.125 -0.072  0.015  0.107 -0.224                            
-## poedema1    -0.004 -0.005 -0.006 -0.049  0.027  0.000                     
+## poedema1    -0.003 -0.005 -0.006 -0.049  0.027  0.000                     
 ## log10(BUN)  -0.705  0.063 -0.045 -0.253 -0.010  0.098  0.006              
-## BD          -0.142  0.199 -0.183  0.138 -0.031  0.030 -0.008 -0.265       
-## drug_AS     -0.092 -0.012 -0.024 -0.022  0.007  0.003 -0.025 -0.044 -0.020
+## BD          -0.143  0.199 -0.183  0.138 -0.031  0.030 -0.008 -0.265       
+## drug_AS     -0.092 -0.012 -0.024 -0.022  0.007  0.003 -0.025 -0.044 -0.021
 ## convergence code: 0
-## Model failed to converge with max|grad| = 0.00249628 (tol = 0.001, component 1)
+## Model failed to converge with max|grad| = 0.00216998 (tol = 0.001, component 1)
 \end{verbatim}
 
 Now let's make counterfactual predictions of anaemia on death for the
@@ -566,7 +637,7 @@ predicted mean probability of death and 80\% predictive intervals.
 \end{Highlighting}
 \end{Shaded}
 
-\includegraphics{LegacyAnalysis_files/figure-latex/unnamed-chunk-8-1.pdf}
+\includegraphics{LegacyAnalysis_files/figure-latex/unnamed-chunk-10-1.pdf}
 
 \subsection{More complex GAM model}\label{more-complex-gam-model}
 
@@ -581,7 +652,8 @@ doing this for the study site\ldots{}
 \begin{Highlighting}[]
 \NormalTok{mod_full_GAM =}\StringTok{ }\KeywordTok{gam}\NormalTok{(outcome }\OperatorTok{~}\StringTok{ }\KeywordTok{s}\NormalTok{(HCT,AgeInYear) }\OperatorTok{+}\StringTok{ }\NormalTok{LPAR_pct  }\OperatorTok{+}\StringTok{ }\NormalTok{coma }\OperatorTok{+}\StringTok{ }\NormalTok{convulsions }\OperatorTok{+}
 \StringTok{                     }\NormalTok{poedema }\OperatorTok{+}\StringTok{ }\KeywordTok{log10}\NormalTok{(BUN) }\OperatorTok{+}\StringTok{ }\NormalTok{BD }\OperatorTok{+}\StringTok{ }\NormalTok{drug_AS }\OperatorTok{+}\StringTok{ }
-\StringTok{                     }\KeywordTok{s}\NormalTok{(studyID, }\DataTypeTok{bs=}\StringTok{'re'}\NormalTok{),}\DataTypeTok{data=}\NormalTok{Complete_Leg_data, }\DataTypeTok{family=}\NormalTok{binomial)}
+\StringTok{                     }\KeywordTok{s}\NormalTok{(studyID, }\DataTypeTok{bs=}\StringTok{'re'}\NormalTok{) }\OperatorTok{+}\StringTok{ }\KeywordTok{s}\NormalTok{(country, }\DataTypeTok{bs=}\StringTok{'re'}\NormalTok{),}
+                   \DataTypeTok{data=}\NormalTok{Complete_Leg_data, }\DataTypeTok{family=}\NormalTok{binomial)}
 \KeywordTok{summary}\NormalTok{(mod_full_GAM)}
 \end{Highlighting}
 \end{Shaded}
@@ -593,30 +665,32 @@ doing this for the study site\ldots{}
 ## 
 ## Formula:
 ## outcome ~ s(HCT, AgeInYear) + LPAR_pct + coma + convulsions + 
-##     poedema + log10(BUN) + BD + drug_AS + s(studyID, bs = "re")
+##     poedema + log10(BUN) + BD + drug_AS + s(studyID, bs = "re") + 
+##     s(country, bs = "re")
 ## 
 ## Parametric coefficients:
-##              Estimate Std. Error z value Pr(>|z|)    
-## (Intercept)  -6.02897    0.27715 -21.753  < 2e-16 ***
-## LPAR_pct      0.03102    0.05971   0.520 0.603387    
-## coma          1.38179    0.09791  14.113  < 2e-16 ***
-## convulsions1  0.53638    0.11439   4.689 2.74e-06 ***
-## poedema1      0.61960    0.38095   1.626 0.103855    
-## log10(BUN)    1.50337    0.16595   9.059  < 2e-16 ***
-## BD            0.12655    0.00726  17.431  < 2e-16 ***
-## drug_AS      -0.33097    0.08995  -3.679 0.000234 ***
+##               Estimate Std. Error z value Pr(>|z|)    
+## (Intercept)  -6.313364   0.269592 -23.418  < 2e-16 ***
+## LPAR_pct      0.005387   0.060503   0.089 0.929055    
+## coma          1.341020   0.100997  13.278  < 2e-16 ***
+## convulsions1  0.523154   0.117424   4.455 8.38e-06 ***
+## poedema1      0.553081   0.384188   1.440 0.149977    
+## log10(BUN)    1.704622   0.170398  10.004  < 2e-16 ***
+## BD            0.122630   0.007348  16.688  < 2e-16 ***
+## drug_AS      -0.343192   0.090443  -3.795 0.000148 ***
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
 ## Approximate significance of smooth terms:
-##                    edf Ref.df Chi.sq  p-value    
-## s(HCT,AgeInYear) 5.951  8.341 33.783 6.23e-05 ***
-## s(studyID)       3.304  5.000  8.193    0.029 *  
+##                      edf Ref.df Chi.sq p-value    
+## s(HCT,AgeInYear)  5.3258  7.429 32.471 4.8e-05 ***
+## s(studyID)        0.1912  5.000  0.198   0.407    
+## s(country)       10.4166 15.000 75.283 6.9e-15 ***
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
-## R-sq.(adj) =  0.259   Deviance explained = 27.6%
-## UBRE = -0.42758  Scale est. = 1         n = 6116
+## R-sq.(adj) =   0.27   Deviance explained = 29.1%
+## UBRE = -0.43766  Scale est. = 1         n = 6116
 \end{verbatim}
 
 Now we compute the corresponding counterfactual probabilities of death
@@ -674,7 +748,7 @@ Which model is better fit in terms of AIC
 
 \begin{verbatim}
 ##                    df      AIC
-## mod_full_GAM 17.25525 3500.936
+## mod_full_GAM 23.93359 3439.294
 ## mod_full_GLM 12.00000 3460.312
 \end{verbatim}
 
@@ -688,10 +762,10 @@ And in terms of deviance
 
 \begin{verbatim}
 ## $mod_full_GLM
-## [1] 3400.198
+## [1] 3400.247
 ## 
 ## $mod_full_GAM
-## [1] 3466.426
+## [1] 3391.427
 \end{verbatim}
 
 
