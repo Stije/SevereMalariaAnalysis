@@ -171,13 +171,26 @@ lines(0:80, ys, lwd=3, col='black')
 ```
 
 
+If we look at the relationship between haematocrit and death:
+
+```{r HCTalone}
+par(las=1, bty='n')
+Complete_Leg_data$country=as.factor(Complete_Leg_data$country)
+modHCT=gam(outcome ~ s(HCT) + s(studyID, bs='re') + s(country, bs='re'),data = Complete_Leg_data, family='binomial')
+summary(modHCT)
+preds = predict(modHCT, newdata = data.frame(HCT=5:45, studyID='AQ', country='Thailand', country=1), 
+                       exclude = c("s(country)","s(studyID)"), type='response', se.fit=T)
+plot(5:45, 100*preds$fit, ylab='Probability death (%)', xlab='Haematocrit', 
+     type='l', lwd=3,ylim = c(5,25))
+lines(5:45, 100*preds$fit + 100*2*preds$se.fit, lty=2,lwd=2)
+lines(5:45, 100*preds$fit - 100*2*preds$se.fit,lty=2,lwd=2)
+```
 
 # Predictive value of anaemia on death adjusting for confounders
 
 Before fitting the more complex GAM models we explore the standard glm (logistic regression) models.
 
 ```{r deathmodel_glm}
-Complete_Leg_data$country=as.factor(Complete_Leg_data$country)
 mod_full_GLM = glmer(outcome ~ HCT + LPAR_pct + AgeInYear + coma + convulsions +
                        poedema + log10(BUN) + BD + drug_AS + 
                        (1 | studyID) + (1 | country),
