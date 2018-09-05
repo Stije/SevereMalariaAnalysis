@@ -112,6 +112,22 @@ ind_keep = !(is.infinite(Complete_Leg_data$LPAR_pct) | is.nan(Complete_Leg_data$
 Complete_Leg_data = Complete_Leg_data[ind_keep,]
 ```
 
+Data summaries
+```{r}
+Africa = c('The Gambia','Mozambique','Ghana','Kenya','Nigeria','Tanzania','Uganda','Rwanda','Congo')
+Asia = c('Thailand','Vietnam','Bangladesh','Myanmar','India','Indonesia')
+writeLines(paste('Children in Africa:',
+                 sum(Complete_Leg_data$AgeInYear < 15 & Complete_Leg_data$country %in% Africa)))
+writeLines(paste('Adults in Africa:',
+                 sum(Complete_Leg_data$AgeInYear >= 15 & Complete_Leg_data$country %in% Africa)))
+
+writeLines(paste('Children in Asia:',
+                 sum(Complete_Leg_data$AgeInYear < 15 & Complete_Leg_data$country %in% Asia)))
+writeLines(paste('Adults in Asia:',
+                 sum(Complete_Leg_data$AgeInYear >= 15 & Complete_Leg_data$country %in% Asia)))
+
+```
+
 # Exploratory analysis
 
 ```{r}
@@ -122,7 +138,7 @@ for(s in unique(Complete_Leg_data$studyID)){
 
 ```{r}
 for(s in unique(Complete_Leg_data$studyID)){
-  print(paste0(s, ', ages:', round(quantile(Complete_Leg_data$AgeInYear[Complete_Leg_data$studyID==s], probs = c(0,.5,1))), collapse = ''))
+  print(paste0(s, ', ages:', round(quantile(Complete_Leg_data$AgeInYear[Complete_Leg_data$studyID==s], probs = c(0,.5,1))), collapse = ' '))
 }
 
 for(s in unique(Complete_Leg_data$studyID)){
@@ -171,7 +187,9 @@ lines(0:80, ys, lwd=3, col='black')
 ```
 
 
-If we look at the relationship between haematocrit and death:
+
+
+The relationship between haematocrit and death:
 
 ```{r HCTalone}
 par(las=1, bty='n')
@@ -184,7 +202,10 @@ plot(5:45, 100*preds$fit, ylab='Probability death (%)', xlab='Haematocrit',
      type='l', lwd=3,ylim = c(5,25))
 lines(5:45, 100*preds$fit + 100*2*preds$se.fit, lty=2,lwd=2)
 lines(5:45, 100*preds$fit - 100*2*preds$se.fit,lty=2,lwd=2)
+abline(h = min(100*preds$fit), lwd=2, lty=3)
 ```
+
+
 
 # Predictive value of anaemia on death adjusting for confounders
 
