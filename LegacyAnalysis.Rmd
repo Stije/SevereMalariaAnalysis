@@ -1,12 +1,18 @@
 ---
 title: "Charactersing effect of anaemia on mortality in severe malaria"
 output:
-  pdf_document: 
+  html_document:
+    keep_md: yes
     fig_caption: yes
-    keep_tex: yes
-    toc: yes
-  html_notebook: default
 ---
+
+```{r, echo=F}
+knitr::opts_chunk$set(cache = TRUE, cache.comments = FALSE, 
+                      echo = TRUE, include = TRUE, 
+                      fig.width = 7, fig.height = 7,
+                      fig.pos = 'H', 
+                      dev = 'png', dpi = 300)
+```
 
 # Background
 
