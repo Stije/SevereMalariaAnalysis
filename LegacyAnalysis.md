@@ -222,12 +222,8 @@ writeLines(paste('Adults in Asia:',
 
 # Exploratory analysis
 
+First we look at the mortality rates across the different studies (only in the Complete_Leg_data, so they won't exactly match the reported fatality rates in the respective papers). This is maling a key assumption that data are missing at random...
 
-```r
-for(s in unique(Complete_Leg_data$studyID)){
-  print(paste(s, ', mortality of:', round(100*mean(Complete_Leg_data$outcome[Complete_Leg_data$studyID==s])),'%'))
-}
-```
 
 ```
 ## [1] "Core Malaria , mortality of: 23 %"
@@ -238,12 +234,7 @@ for(s in unique(Complete_Leg_data$studyID)){
 ## [1] "AQ , mortality of: 23 %"
 ```
 
-
-```r
-for(s in unique(Complete_Leg_data$studyID)){
-  print(paste0(s, ', ages:', round(quantile(Complete_Leg_data$AgeInYear[Complete_Leg_data$studyID==s], probs = c(0,.5,1))), collapse = ' '))
-}
-```
+We look at the quantiles of the ages in the different studies:
 
 ```
 ## [1] "Core Malaria, ages:1 Core Malaria, ages:27 Core Malaria, ages:75"
@@ -252,13 +243,6 @@ for(s in unique(Complete_Leg_data$studyID)){
 ## [1] "SEAQUAMAT, ages:2 SEAQUAMAT, ages:25 SEAQUAMAT, ages:87"
 ## [1] "AQUAMAT, ages:0 AQUAMAT, ages:2 AQUAMAT, ages:78"
 ## [1] "AQ, ages:15 AQ, ages:30 AQ, ages:74"
-```
-
-```r
-for(s in unique(Complete_Leg_data$studyID)){
-  print(s)
-  print(table(Complete_Leg_data$drug[Complete_Leg_data$studyID==s]))
-}
 ```
 
 ```
@@ -301,7 +285,8 @@ for(s in unique(Complete_Leg_data$studyID)){
 ```
 
 
-Let's look at the key predictive variables. We use a random effects term to model differences between studies.
+Let's look at the linear associations between the key baseline variables. We use mixed effects linear models to estimate these associations (random effect terms for both country and study).
+
 
 ```
 ## Linear mixed model fit by REML ['lmerMod']
@@ -419,8 +404,9 @@ Let's look at the key predictive variables. We use a random effects term to mode
 
 
 
-
-The relationship between haematocrit and death:
+Now one of the important plots: the un-adjusted association between haematocrit at baseline and death.
+This is known as the U curve, and we can see this U association (again I'm adjusting for country and study).
+Fitting a GAM here as we know the association is not linear in HCT (previously reported as U-shaped).
 
 
 ```r
@@ -471,6 +457,8 @@ abline(h = min(100*preds$fit), lwd=2, lty=3)
 
 
 # Predictive value of anaemia on death adjusting for confounders
+
+This section now looks at the estimated causal effect of anaemia on outcome, if we assume that the posited DAG is correct. We fit both linear and non-linear models to estimate this effect.
 
 Before fitting the more complex GAM models we explore the standard glm (logistic regression) models.
 
@@ -544,8 +532,7 @@ summary(mod_full_GLM)
 ## Model failed to converge with max|grad| = 0.00101495 (tol = 0.001, component 1)
 ```
 
-Now let's make counterfactual predictions of anaemia on death for the patients in the database.
-
+Now let's make counterfactual retrodictions of anaemia on death for the patients in the database.
 
 
 ```r
@@ -565,17 +552,6 @@ for(i in 1:length(x_hcts)){
 
 The way to interpret this `counterfactual' plot is as follows: suppose that every individual in the dataset was assigned (as in a intervention) a specific haematocrit $X$, what would the resulting per patient probability of death be. Here we summarise these probabilities by the predicted mean probability of death and 80\% predictive intervals.
 
-
-```r
-plot(x_hcts,probs_lin[2,], xlim=c(4,45), ylab='Predicted probability of death', 
-     xlab='Haematocrit (%)', ylim=c(0,20), lty=1, lwd=3, type='l')
-lines(x_hcts, probs_lin[1,], lty=2, lwd=2)
-lines(x_hcts, probs_lin[3,], lty=2, lwd=2)
-abline(h=overall_median_mortality, lwd=3, col='blue',lty=2)
-legend('topleft', col=c('black','black','blue'), lwd=3, lty=c(1,2,2),
-       legend = c('Median counterfactual value', '25th and 75th counterfactual quantiles','Retrodicted median value'))
-```
-
 ![](LegacyAnalysis_files/figure-html/unnamed-chunk-12-1.png)<!-- -->
 
 
@@ -584,8 +560,8 @@ legend('topleft', col=c('black','black','blue'), lwd=3, lty=c(1,2,2),
 The GAM model allows for non-linear relationships between certain variables and the outcome.
 
 Here we fit as non-linear the effect of age and haematocrit on mortality.
-We add a random effect term for the studyID
-We should also be doing this for the study site...
+We add a random effect term for the studyID and a random effect term for the country.
+This should be adjusting for a confounder of quality of care (which potentially impacts both general anaemia and outcome in study).
 
 
 ```r
