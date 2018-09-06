@@ -112,14 +112,15 @@
 }
 
 \setlength{\droptitle}{-2em}
-  \title{Charactersing effect of anaemia on mortality in severe malaria}
-  \pretitle{\vspace{\droptitle}\centering\huge}
-  \posttitle{\par}
-  \author{}
-  \preauthor{}\postauthor{}
-  \date{}
-  \predate{}\postdate{}
 
+  \title{Charactersing effect of anaemia on mortality in severe malaria}
+    \pretitle{\vspace{\droptitle}\centering\huge}
+  \posttitle{\par}
+    \author{}
+    \preauthor{}\postauthor{}
+    \date{}
+    \predate{}\postdate{}
+  
 
 \begin{document}
 \maketitle
@@ -330,6 +331,54 @@ studies:
 \end{Highlighting}
 \end{Shaded}
 
+Data summaries
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{Africa =}\StringTok{ }\KeywordTok{c}\NormalTok{(}\StringTok{'The Gambia'}\NormalTok{,}\StringTok{'Mozambique'}\NormalTok{,}\StringTok{'Ghana'}\NormalTok{,}\StringTok{'Kenya'}\NormalTok{,}\StringTok{'Nigeria'}\NormalTok{,}\StringTok{'Tanzania'}\NormalTok{,}\StringTok{'Uganda'}\NormalTok{,}\StringTok{'Rwanda'}\NormalTok{,}\StringTok{'Congo'}\NormalTok{)}
+\NormalTok{Asia =}\StringTok{ }\KeywordTok{c}\NormalTok{(}\StringTok{'Thailand'}\NormalTok{,}\StringTok{'Vietnam'}\NormalTok{,}\StringTok{'Bangladesh'}\NormalTok{,}\StringTok{'Myanmar'}\NormalTok{,}\StringTok{'India'}\NormalTok{,}\StringTok{'Indonesia'}\NormalTok{)}
+\KeywordTok{writeLines}\NormalTok{(}\KeywordTok{paste}\NormalTok{(}\StringTok{'Children in Africa:'}\NormalTok{,}
+                 \KeywordTok{sum}\NormalTok{(Complete_Leg_data}\OperatorTok{$}\NormalTok{AgeInYear }\OperatorTok{<}\StringTok{ }\DecValTok{15} \OperatorTok{&}\StringTok{ }\NormalTok{Complete_Leg_data}\OperatorTok{$}\NormalTok{country }\OperatorTok{%in%}\StringTok{ }\NormalTok{Africa)))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Children in Africa: 3779
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{writeLines}\NormalTok{(}\KeywordTok{paste}\NormalTok{(}\StringTok{'Adults in Africa:'}\NormalTok{,}
+                 \KeywordTok{sum}\NormalTok{(Complete_Leg_data}\OperatorTok{$}\NormalTok{AgeInYear }\OperatorTok{>=}\StringTok{ }\DecValTok{15} \OperatorTok{&}\StringTok{ }\NormalTok{Complete_Leg_data}\OperatorTok{$}\NormalTok{country }\OperatorTok{%in%}\StringTok{ }\NormalTok{Africa)))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Adults in Africa: 44
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{writeLines}\NormalTok{(}\KeywordTok{paste}\NormalTok{(}\StringTok{'Children in Asia:'}\NormalTok{,}
+                 \KeywordTok{sum}\NormalTok{(Complete_Leg_data}\OperatorTok{$}\NormalTok{AgeInYear }\OperatorTok{<}\StringTok{ }\DecValTok{15} \OperatorTok{&}\StringTok{ }\NormalTok{Complete_Leg_data}\OperatorTok{$}\NormalTok{country }\OperatorTok{%in%}\StringTok{ }\NormalTok{Asia)))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Children in Asia: 198
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{writeLines}\NormalTok{(}\KeywordTok{paste}\NormalTok{(}\StringTok{'Adults in Asia:'}\NormalTok{,}
+                 \KeywordTok{sum}\NormalTok{(Complete_Leg_data}\OperatorTok{$}\NormalTok{AgeInYear }\OperatorTok{>=}\StringTok{ }\DecValTok{15} \OperatorTok{&}\StringTok{ }\NormalTok{Complete_Leg_data}\OperatorTok{$}\NormalTok{country }\OperatorTok{%in%}\StringTok{ }\NormalTok{Asia)))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Adults in Asia: 2095
+\end{verbatim}
+
 \section{Exploratory analysis}\label{exploratory-analysis}
 
 \begin{Shaded}
@@ -352,18 +401,18 @@ studies:
 \begin{Shaded}
 \begin{Highlighting}[]
 \ControlFlowTok{for}\NormalTok{(s }\ControlFlowTok{in} \KeywordTok{unique}\NormalTok{(Complete_Leg_data}\OperatorTok{$}\NormalTok{studyID))\{}
-  \KeywordTok{print}\NormalTok{(}\KeywordTok{paste0}\NormalTok{(s, }\StringTok{', ages:'}\NormalTok{, }\KeywordTok{round}\NormalTok{(}\KeywordTok{quantile}\NormalTok{(Complete_Leg_data}\OperatorTok{$}\NormalTok{AgeInYear[Complete_Leg_data}\OperatorTok{$}\NormalTok{studyID}\OperatorTok{==}\NormalTok{s], }\DataTypeTok{probs =} \KeywordTok{c}\NormalTok{(}\DecValTok{0}\NormalTok{,.}\DecValTok{5}\NormalTok{,}\DecValTok{1}\NormalTok{))), }\DataTypeTok{collapse =} \StringTok{''}\NormalTok{))}
+  \KeywordTok{print}\NormalTok{(}\KeywordTok{paste0}\NormalTok{(s, }\StringTok{', ages:'}\NormalTok{, }\KeywordTok{round}\NormalTok{(}\KeywordTok{quantile}\NormalTok{(Complete_Leg_data}\OperatorTok{$}\NormalTok{AgeInYear[Complete_Leg_data}\OperatorTok{$}\NormalTok{studyID}\OperatorTok{==}\NormalTok{s], }\DataTypeTok{probs =} \KeywordTok{c}\NormalTok{(}\DecValTok{0}\NormalTok{,.}\DecValTok{5}\NormalTok{,}\DecValTok{1}\NormalTok{))), }\DataTypeTok{collapse =} \StringTok{' '}\NormalTok{))}
 \NormalTok{\}}
 \end{Highlighting}
 \end{Shaded}
 
 \begin{verbatim}
-## [1] "Core Malaria, ages:1Core Malaria, ages:27Core Malaria, ages:75"
-## [1] "AQGambia, ages:1AQGambia, ages:4AQGambia, ages:9"
-## [1] "AAV, ages:15AAV, ages:34AAV, ages:77"
-## [1] "SEAQUAMAT, ages:2SEAQUAMAT, ages:25SEAQUAMAT, ages:87"
-## [1] "AQUAMAT, ages:0AQUAMAT, ages:2AQUAMAT, ages:78"
-## [1] "AQ, ages:15AQ, ages:30AQ, ages:74"
+## [1] "Core Malaria, ages:1 Core Malaria, ages:27 Core Malaria, ages:75"
+## [1] "AQGambia, ages:1 AQGambia, ages:4 AQGambia, ages:9"
+## [1] "AAV, ages:15 AAV, ages:34 AAV, ages:77"
+## [1] "SEAQUAMAT, ages:2 SEAQUAMAT, ages:25 SEAQUAMAT, ages:87"
+## [1] "AQUAMAT, ages:0 AQUAMAT, ages:2 AQUAMAT, ages:78"
+## [1] "AQ, ages:15 AQ, ages:30 AQ, ages:74"
 \end{verbatim}
 
 \begin{Shaded}
@@ -531,7 +580,7 @@ to model differences between studies.
 
 \includegraphics{LegacyAnalysis_files/figure-latex/ExploratoryPlots-1.pdf}
 
-If we look at the relationship between haematocrit and death:
+The relationship between haematocrit and death:
 
 \begin{Shaded}
 \begin{Highlighting}[]
@@ -576,6 +625,7 @@ If we look at the relationship between haematocrit and death:
      \DataTypeTok{type=}\StringTok{'l'}\NormalTok{, }\DataTypeTok{lwd=}\DecValTok{3}\NormalTok{,}\DataTypeTok{ylim =} \KeywordTok{c}\NormalTok{(}\DecValTok{5}\NormalTok{,}\DecValTok{25}\NormalTok{))}
 \KeywordTok{lines}\NormalTok{(}\DecValTok{5}\OperatorTok{:}\DecValTok{45}\NormalTok{, }\DecValTok{100}\OperatorTok{*}\NormalTok{preds}\OperatorTok{$}\NormalTok{fit }\OperatorTok{+}\StringTok{ }\DecValTok{100}\OperatorTok{*}\DecValTok{2}\OperatorTok{*}\NormalTok{preds}\OperatorTok{$}\NormalTok{se.fit, }\DataTypeTok{lty=}\DecValTok{2}\NormalTok{,}\DataTypeTok{lwd=}\DecValTok{2}\NormalTok{)}
 \KeywordTok{lines}\NormalTok{(}\DecValTok{5}\OperatorTok{:}\DecValTok{45}\NormalTok{, }\DecValTok{100}\OperatorTok{*}\NormalTok{preds}\OperatorTok{$}\NormalTok{fit }\OperatorTok{-}\StringTok{ }\DecValTok{100}\OperatorTok{*}\DecValTok{2}\OperatorTok{*}\NormalTok{preds}\OperatorTok{$}\NormalTok{se.fit,}\DataTypeTok{lty=}\DecValTok{2}\NormalTok{,}\DataTypeTok{lwd=}\DecValTok{2}\NormalTok{)}
+\KeywordTok{abline}\NormalTok{(}\DataTypeTok{h =} \KeywordTok{min}\NormalTok{(}\DecValTok{100}\OperatorTok{*}\NormalTok{preds}\OperatorTok{$}\NormalTok{fit), }\DataTypeTok{lwd=}\DecValTok{2}\NormalTok{, }\DataTypeTok{lty=}\DecValTok{3}\NormalTok{)}
 \end{Highlighting}
 \end{Shaded}
 
@@ -597,9 +647,9 @@ Before fitting the more complex GAM models we explore the standard glm
 \end{Shaded}
 
 \begin{verbatim}
-## Warning in checkConv(attr(opt, "derivs"), opt$par, ctrl = control
-## $checkConv, : Model failed to converge with max|grad| = 0.00101495 (tol =
-## 0.001, component 1)
+## Warning in checkConv(attr(opt, "derivs"), opt$par, ctrl =
+## control$checkConv, : Model failed to converge with max|grad| = 0.00101495
+## (tol = 0.001, component 1)
 \end{verbatim}
 
 \begin{Shaded}
@@ -698,7 +748,7 @@ predicted mean probability of death and 80\% predictive intervals.
 \end{Highlighting}
 \end{Shaded}
 
-\includegraphics{LegacyAnalysis_files/figure-latex/unnamed-chunk-10-1.pdf}
+\includegraphics{LegacyAnalysis_files/figure-latex/unnamed-chunk-11-1.pdf}
 
 \subsection{More complex GAM model}\label{more-complex-gam-model}
 
@@ -731,12 +781,12 @@ doing this for the study site\ldots{}
 ## 
 ## Parametric coefficients:
 ##               Estimate Std. Error z value Pr(>|z|)    
-## (Intercept)  -6.327660   0.270379 -23.403  < 2e-16 ***
-## LPAR_pct      0.001763   0.060455   0.029 0.976734    
-## coma          1.330823   0.100889  13.191  < 2e-16 ***
-## convulsions1  0.534702   0.117347   4.557  5.2e-06 ***
-## poedema1      0.547874   0.384141   1.426 0.153801    
-## log10(BUN)    1.701427   0.170554   9.976  < 2e-16 ***
+## (Intercept)  -6.327596   0.270364 -23.404  < 2e-16 ***
+## LPAR_pct      0.001766   0.060455   0.029 0.976696    
+## coma          1.330827   0.100888  13.191  < 2e-16 ***
+## convulsions1  0.534704   0.117346   4.557  5.2e-06 ***
+## poedema1      0.547871   0.384139   1.426 0.153801    
+## log10(BUN)    1.701401   0.170552   9.976  < 2e-16 ***
 ## BD            0.123330   0.007331  16.824  < 2e-16 ***
 ## drug_AS      -0.343908   0.090360  -3.806 0.000141 ***
 ## ---
@@ -744,9 +794,9 @@ doing this for the study site\ldots{}
 ## 
 ## Approximate significance of smooth terms:
 ##                       edf Ref.df Chi.sq  p-value    
-## s(HCT,AgeInYear) 5.486902  7.664 33.629 3.61e-05 ***
-## s(studyID)       0.004287  5.000  0.003    0.495    
-## s(country)       9.944672 14.000 74.600 2.80e-15 ***
+## s(HCT,AgeInYear) 5.487067  7.664 33.634 3.60e-05 ***
+## s(studyID)       0.004292  5.000  0.003    0.496    
+## s(country)       9.942725 14.000 74.592 2.79e-15 ***
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
@@ -809,7 +859,7 @@ Which model is better fit in terms of AIC
 
 \begin{verbatim}
 ##                    df      AIC
-## mod_full_GAM 23.43586 3438.101
+## mod_full_GAM 23.43408 3438.101
 ## mod_full_GLM 12.00000 3459.687
 \end{verbatim}
 
@@ -826,7 +876,7 @@ And in terms of deviance
 ## [1] 3400.304
 ## 
 ## $mod_full_GAM
-## [1] 3391.229
+## [1] 3391.233
 \end{verbatim}
 
 
