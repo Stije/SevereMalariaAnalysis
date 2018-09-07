@@ -10,6 +10,15 @@ output:
 
 
 
+
+```r
+require(RColorBrewer)
+```
+
+```
+## Loading required package: RColorBrewer
+```
+
 # Outline
 
 This code goes through some very simple simulations that demonstrate selection bias in a severe malaria type study.
@@ -96,7 +105,7 @@ writeLines(paste('This selects:', round(100*Nstudy/N),'% of individuals'))
 ```
 
 ```
-## This selects: 49 % of individuals
+## This selects: 50 % of individuals
 ```
 
 In the Clark study they select 52% of individuals (3359: coma only; 2184: anaemia only; 714: both; 11871 total number of patients).
@@ -111,16 +120,16 @@ Prevalence of G6PD deficiency in this group:
 ```
 ## 
 ##    Def Normal 
-##     17     83
+##     16     84
 ```
 
 There is a slightly increased number of G6PD deficients seen because they are being selected for by anaemia.
 
-Now we dig into the different groups and see whether the probabilities correspond to the true data generating probabilities:
+Now we dig into the different grouPIs and see whether the probabilities correspond to the true data generating probabilities:
 
 ## Coma between normals and deficients
 
-First for Coma (in this model coma and G6PD are independent so there should be no differences between the groups!):
+First for Coma (in this model coma and G6PD are independent so there should be no differences between the grouPIs!):
 
 ```
 ## 
@@ -130,7 +139,7 @@ First for Coma (in this model coma and G6PD are independent so there should be n
 ```
 ## 
 ##    Coma No Coma 
-##      69      31
+##      70      30
 ```
 
 ```
@@ -141,7 +150,7 @@ First for Coma (in this model coma and G6PD are independent so there should be n
 ```
 ## 
 ##    Coma No Coma 
-##      64      36
+##      63      37
 ```
 
 Odds ratio for Anaemia:
@@ -153,7 +162,7 @@ O2/O1
 ```
 
 ```
-## [1] 0.8071299
+## [1] 0.7162243
 ```
 
 ## Anaemia in the normals and deficients
@@ -168,7 +177,7 @@ Anaemia in the G6PD normal group
 ```
 ## 
 ##    Anaemia No Anaemia 
-##         47         53
+##         45         55
 ```
 
 ```
@@ -204,30 +213,36 @@ O2/O1
 ```
 
 ```
-## [1] 1.417336
+## [1] 1.529497
 ```
 
 # Conclusion
 
-Due to the selection bias, you're seeing higher rates of anaemia in the G6PD deficient group (which is expected but also it's higher than the true rate), and you're seeing lower rates of coma.
+Due to the selection bias, you're seeing higher rates of anaemia in the G6PD deficient group (which is expected and corresponds to the model), and you're seeing lower rates of coma.
 
-Therefore you can get this `balancing selection' illusion just from a simple selection bias....
+Therefore you can get this `balancing selection' illusion just from a simple selection bias along with an effect of G6PDdon anaemia.
 
 # Graphical visualisation of bias
 
 
+We run the model for values of pi from P_anaemia up to 0.35 (50\% increase).
+
+
 ```r
 # The number of malaria patients
-N = 4*10^5
-ps = c(seq(0.14,P_anaemia, length.out = 50), seq(P_anaemia, 0.35, length.out = 50))
-ORcoma = ORanaemia = array(dim=length(ps))
-for(i in 1:length(ps)){
-  P_anaemia_def = ps[i] 
+N = 10^6
+PIs = seq(P_anaemia, 0.35, length.out = 40)
+ORcoma = ORanaemia = array(dim=length(PIs))
+TrueOR_anaemia = array(dim=length(PIs))
+for(i in 1:length(PIs)){
+  P_anaemia_def = PIs[i] 
   P_anaemia_norm = (P_anaemia - P_G6PDdef*P_anaemia_def)/(1-P_G6PDdef)
   
   # We assume that G6PD status and Coma status are independent
-  G6PDstatus = sample(c('Normal','Def'), size = N, replace = T, prob = c(1-P_G6PDdef, P_G6PDdef))
-  Comastatus = sample(c('No Coma','Coma'), size = N, replace = T, prob = c(1-P_coma, P_coma))
+  G6PDstatus = sample(c('Normal','Def'), size = N, replace = T, 
+                      prob = c(1-P_G6PDdef, P_G6PDdef))
+  Comastatus = sample(c('No Coma','Coma'), size = N, replace = T, 
+                      prob = c(1-P_coma, P_coma))
   # Generate anaemia status dependent on G6PD status
   Anaemiastatus = unlist(sapply(G6PDstatus, function(x){
     if(x=='Normal') {
@@ -244,7 +259,7 @@ for(i in 1:length(ps)){
   Study_dat = data.frame(Coma = Comastatus[study_patients],
                          G6PD = G6PDstatus[study_patients],
                          Anaemia = Anaemiastatus[study_patients])
-  # odd ratio for coma
+  # odds ratio for coma
   O1 = sum(Study_dat$Coma=='Coma' & Study_dat$G6PD=='Normal')/sum(Study_dat$Coma=='No Coma' & Study_dat$G6PD=='Normal')
   O2 = sum(Study_dat$Coma=='Coma' & Study_dat$G6PD=='Def')/sum(Study_dat$Coma=='No Coma' & Study_dat$G6PD=='Def')
   ORcoma[i] = O2/O1
@@ -254,34 +269,14 @@ for(i in 1:length(ps)){
   O2 = sum(Study_dat$Anaemia=='Anaemia' & Study_dat$G6PD=='Def')/sum(Study_dat$Anaemia=='No Anaemia' & Study_dat$G6PD=='Def')
   O2/O1
   ORanaemia[i] = O2/O1
+  
+  TrueOR_anaemia[i] = (P_anaemia_def/(1-P_anaemia_def))/(P_anaemia_norm/(1-P_anaemia_norm))
 }
 ```
 
 
-
-```r
-par(las = 1, bty='n')
-plot(ps, ORcoma, xlab = 'P(Anaemia | G6PDd)', xaxt='n',
-     type='l', lwd=3, col ='red', ylab='Odds Ratio', 
-     ylim = range(c(ORcoma,ORanaemia)), yaxt='n', xlim= c(0.15,0.35))
-axis(1, at = c(0.15, 0.2,P_anaemia,0.3, 0.35), 
-     labels = c('0.15', 0.2,'0.24=P(Anaemia)', 0.3,'0.35'))
-axis(2, at = c(0.5, 1, 1.5))
-
-lines(ps, ORanaemia, lwd = 3, col='blue')
-abline(v = P_anaemia, lwd=3)
-abline(h = 1, lwd =3)
-abline(h = c(0.82 , 0.69, 0.98), col='red', lwd=c(2,1,1), lty=c(1,2,2))
-abline(h = c(1.48, 1.22,1.8), col='blue', lwd=c(2,1,1), lty=c(1,2,2))
-
-ind = which(ORanaemia>1.22 & ORanaemia<1.8 & ORcoma > 0.69 & ORcoma <0.98)
-xs = range(ps[ind])
-polygon(c(xs, rev(xs)),c(0,0,3,3),col=rgb(0, 200, 0, 127, maxColorValue=255),border = NA)
-legend('topright', col=c('red','blue'), legend = c('Coma','Anaemia'),
-       lwd=3, lty=1, bty = 'o', bg='white')
-```
+The following plot shows how varying the odds ratio for anaemia changes the observed odds ratio for coma:
 
 ![](SelectionBiasSimulation_files/figure-html/ModelSimulation-1.png)<!-- -->
-
 
 
