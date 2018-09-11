@@ -42,7 +42,7 @@ library(rpart.plot)
 
 # Imputation of missing variables
 
-Quite a lot of the important covariates are missing in the older studies. We use linear regression to estimate these unknown variables:
+Quite a lot of the important covariates are missing in the older studies. We use linear regression to estimate these unknown variables. This section shows the results for single imputation - when fitting the final models we use multiple imputation.
 
 * Mising base deficit is imputed using bicarbonate (if available) else using respiratory rate
 * Missing Blood urea nitrogen is imputed using creatinine
@@ -163,18 +163,32 @@ Let's look at the linear associations between the key baseline variables. We use
 par(las=1, mfrow=c(2,2), mar=c(4,4,1,1), bty='n')
 ## Base Excess and HCT
 plot(jitter(Leg_data$HCT,amount=1), jitter(Leg_data$BD), 
-     col=Leg_data$studyID, pch='*', xlab='Haematocrit (%)', ylab='Base Deficit')
-mod_HCT_BD = lmer(formula = BD ~ HCT + (1 | studyID/country), data = Complete_Leg_data)
+     col=Leg_data$studyID, pch='*', xlab='Haematocrit (%)', 
+     ylab='Base Deficit')
+mod_HCT_BD = gam(formula = BD ~ s(HCT) + s(studyID, bs='re') + 
+                   s(country, bs='re'), 
+                 data = Complete_Leg_data)
 summary(mod_HCT_BD)
-ys = predict(object = mod_HCT_BD, newdata = data.frame(HCT=8:50, studyID=NA), re.form=NA)
+ys = predict(object = mod_HCT_BD, 
+             newdata = data.frame(HCT=8:50,
+                                  studyID='AQ',
+                                  country='Vietnam'), 
+             exclude = c("s(country)","s(studyID)"))
 lines(8:50, ys, lwd=3, col='black')
 
 ## Parasitaemia and Anaemia
 plot(jitter(Leg_data$HCT,amount=1), Leg_data$LPAR_pct, 
-     col=Leg_data$studyID, pch='*', xlab='Haematocrit (%)', ylab='Log10 % parasitised RBCs')
-mod_HCT_LPAR = lmer(formula = LPAR_pct ~ HCT + (1 | studyID/country), data = Complete_Leg_data)
+     col=Leg_data$studyID, pch='*', xlab='Haematocrit (%)', 
+     ylab='Log10 % parasitised RBCs')
+mod_HCT_LPAR = gam(formula = LPAR_pct ~ s(HCT) + s(studyID, bs='re') + 
+                   s(country, bs='re'),
+                   data = Complete_Leg_data)
 summary(mod_HCT_LPAR)
-ys = predict(object = mod_HCT_LPAR, newdata = data.frame(HCT=8:50, studyID=NA), re.form=NA)
+ys = predict(object = mod_HCT_LPAR, 
+             newdata = data.frame(HCT=8:50,
+                                  studyID='AQ',
+                                  country='Vietnam'), 
+             exclude = c("s(country)","s(studyID)"))
 lines(8:50, ys, lwd=3, col='black')
 
 ## BUN and BD
@@ -182,17 +196,30 @@ plot(jitter(log10(Leg_data$BUN),amount=.1), jitter(Leg_data$BD),
      col=Leg_data$studyID, pch='*', xlab='Blood Urea Nitrogen (mmol/L)', 
      ylab='Base Deficit', xaxt='n')
 axis(1, at=c(log10(2), 1, 2), labels = c(2,10,100))
-mod_BUN_BD = lmer(formula = BD ~ log10(BUN) + (1 | studyID/country), data = Complete_Leg_data)
+mod_BUN_BD = gam(formula = BD ~ s(log10(BUN)) + s(studyID, bs='re') + 
+                   s(country, bs='re'),
+                 data = Complete_Leg_data)
 summary(mod_BUN_BD)
-ys = predict(object = mod_BUN_BD, newdata = data.frame(BUN=2:166, studyID=NA), re.form=NA)
+ys = predict(object = mod_BUN_BD, 
+             newdata = data.frame(BUN=2:166,
+                                  studyID='AQ',
+                                  country='Vietnam'), 
+             exclude = c("s(country)","s(studyID)"))
 lines(log10(2:166), ys, lwd=3, col='black')
 
 ## Parasitaemia and Anaemia
 plot(jitter(Leg_data$AgeInYear,amount=1), Leg_data$HCT, 
-     col=Leg_data$studyID, pch='*', xlab='Age in years', ylab='Haematocrit')
-mod_Age_HCT = lmer(formula = HCT ~ AgeInYear + (1 | studyID/country), data = Complete_Leg_data)
+     col=Leg_data$studyID, pch='*', xlab='Age in years', 
+     ylab='Haematocrit')
+mod_Age_HCT = gam(formula = HCT ~ s(AgeInYear)  + s(studyID, bs='re') + 
+                   s(country, bs='re'), 
+                  data = Complete_Leg_data)
 summary(mod_Age_HCT)
-ys = predict(object = mod_Age_HCT, newdata = data.frame(AgeInYear=0:80, studyID=NA), re.form=NA)
+ys = predict(object = mod_Age_HCT, 
+             newdata = data.frame(AgeInYear=0:80,
+                                  studyID='AQ',
+                                  country='Vietnam'), 
+             exclude = c("s(country)","s(studyID)"))
 lines(0:80, ys, lwd=3, col='black')
 ```
 
@@ -205,10 +232,11 @@ Fitting a GAM here as we know the association is not linear in HCT (previously r
 ```{r HCTalone}
 par(las=1, bty='n')
 Complete_Leg_data$country=as.factor(Complete_Leg_data$country)
-modHCT=gam(outcome ~ s(HCT) + s(studyID, bs='re') + s(country, bs='re'),data = Complete_Leg_data, family='binomial')
+modHCT=gam(outcome ~ s(HCT) + s(studyID, bs='re') + s(country, bs='re'),
+           data = Complete_Leg_data, family='binomial')
 summary(modHCT)
 preds = predict(modHCT, newdata = data.frame(HCT=5:45, studyID='AQ', country='Thailand', country=1), 
-                       exclude = c("s(country)","s(studyID)"), type='response', se.fit=T)
+                exclude = c("s(country)","s(studyID)"), type='response', se.fit=T)
 plot(5:45, 100*preds$fit, ylab='Probability death (%)', xlab='Haematocrit', 
      type='l', lwd=3,ylim = c(5,25))
 lines(5:45, 100*preds$fit + 100*2*preds$se.fit, lty=2,lwd=2)

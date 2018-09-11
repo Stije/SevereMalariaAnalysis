@@ -21,7 +21,7 @@ This looks at the severe malaria legacy dataset from MORU
 
 # Imputation of missing variables
 
-Quite a lot of the important covariates are missing in the older studies. We use linear regression to estimate these unknown variables:
+Quite a lot of the important covariates are missing in the older studies. We use linear regression to estimate these unknown variables. This section shows the results for single imputation - when fitting the final models we use multiple imputation.
 
 * Mising base deficit is imputed using bicarbonate (if available) else using respiratory rate
 * Missing Blood urea nitrogen is imputed using creatinine
@@ -289,115 +289,107 @@ Let's look at the linear associations between the key baseline variables. We use
 
 
 ```
-## Linear mixed model fit by REML ['lmerMod']
-## Formula: BD ~ HCT + (1 | studyID/country)
-##    Data: Complete_Leg_data
 ## 
-## REML criterion at convergence: 40261.9
+## Family: gaussian 
+## Link function: identity 
 ## 
-## Scaled residuals: 
-##     Min      1Q  Median      3Q     Max 
-## -4.4421 -0.6612 -0.1488  0.5224  4.7209 
+## Formula:
+## BD ~ s(HCT) + s(studyID, bs = "re") + s(country, bs = "re")
 ## 
-## Random effects:
-##  Groups          Name        Variance Std.Dev.
-##  country:studyID (Intercept)  2.6525  1.6286  
-##  studyID         (Intercept)  0.8373  0.9151  
-##  Residual                    41.8947  6.4726  
-## Number of obs: 6116, groups:  country:studyID, 18; studyID, 6
+## Parametric coefficients:
+##             Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)   7.5393     0.6708   11.24   <2e-16 ***
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
-## Fixed effects:
-##              Estimate Std. Error t value
-## (Intercept) 10.339058   0.653393   15.82
-## HCT         -0.133548   0.009699  -13.77
+## Approximate significance of smooth terms:
+##               edf Ref.df      F  p-value    
+## s(HCT)      5.015  6.114  45.51  < 2e-16 ***
+## s(studyID)  3.104  5.000 296.05 6.14e-05 ***
+## s(country) 12.773 14.000  36.15  0.00195 ** 
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
-## Correlation of Fixed Effects:
-##     (Intr)
-## HCT -0.394
+## R-sq.(adj) =  0.143   Deviance explained = 14.5%
+## GCV =  41.46  Scale est. = 41.312    n = 6116
 ```
 
 ```
-## Linear mixed model fit by REML ['lmerMod']
-## Formula: LPAR_pct ~ HCT + (1 | studyID/country)
-##    Data: Complete_Leg_data
 ## 
-## REML criterion at convergence: 13822.9
+## Family: gaussian 
+## Link function: identity 
 ## 
-## Scaled residuals: 
-##     Min      1Q  Median      3Q     Max 
-## -4.7144 -0.5555  0.1598  0.7265  2.4355 
+## Formula:
+## LPAR_pct ~ s(HCT) + s(studyID, bs = "re") + s(country, bs = "re")
 ## 
-## Random effects:
-##  Groups          Name        Variance Std.Dev.
-##  country:studyID (Intercept) 0.00946  0.09726 
-##  studyID         (Intercept) 0.07496  0.27379 
-##  Residual                    0.55564  0.74541 
-## Number of obs: 6116, groups:  country:studyID, 18; studyID, 6
+## Parametric coefficients:
+##             Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)   0.5303     0.0836   6.344  2.4e-10 ***
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
-## Fixed effects:
-##              Estimate Std. Error t value
-## (Intercept)  0.659944   0.121244   5.443
-## HCT         -0.004579   0.001116  -4.105
+## Approximate significance of smooth terms:
+##              edf Ref.df       F  p-value    
+## s(HCT)     2.159  2.739   7.619 0.000159 ***
+## s(studyID) 4.405  5.000 420.823  < 2e-16 ***
+## s(country) 9.881 14.000  14.595 0.022998 *  
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
-## Correlation of Fixed Effects:
-##     (Intr)
-## HCT -0.251
+## R-sq.(adj) =  0.102   Deviance explained = 10.4%
+## GCV = 0.55697  Scale est. = 0.55538   n = 6116
 ```
 
 ```
-## Linear mixed model fit by REML ['lmerMod']
-## Formula: BD ~ log10(BUN) + (1 | studyID/country)
-##    Data: Complete_Leg_data
 ## 
-## REML criterion at convergence: 39236.2
+## Family: gaussian 
+## Link function: identity 
 ## 
-## Scaled residuals: 
-##     Min      1Q  Median      3Q     Max 
-## -5.6063 -0.6369 -0.1041  0.5191  5.0754 
+## Formula:
+## BD ~ s(log10(BUN)) + s(studyID, bs = "re") + s(country, bs = "re")
 ## 
-## Random effects:
-##  Groups          Name        Variance Std.Dev.
-##  country:studyID (Intercept)  2.876   1.696   
-##  studyID         (Intercept)  6.858   2.619   
-##  Residual                    35.405   5.950   
-## Number of obs: 6116, groups:  country:studyID, 18; studyID, 6
+## Parametric coefficients:
+##             Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)    6.658      0.664   10.03   <2e-16 ***
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
-## Fixed effects:
-##             Estimate Std. Error t value
-## (Intercept)  -6.8409     1.2574   -5.44
-## log10(BUN)    9.3530     0.2559   36.55
+## Approximate significance of smooth terms:
+##                  edf Ref.df     F  p-value    
+## s(log10(BUN))  4.417  5.452 249.3  < 2e-16 ***
+## s(studyID)     2.399  5.000 393.8 2.16e-11 ***
+## s(country)    13.364 14.000 181.8  < 2e-16 ***
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
-## Correlation of Fixed Effects:
-##            (Intr)
-## log10(BUN) -0.293
+## R-sq.(adj) =  0.268   Deviance explained = 27.1%
+## GCV = 35.373  Scale est. = 35.25     n = 6116
 ```
 
 ```
-## Linear mixed model fit by REML ['lmerMod']
-## Formula: HCT ~ AgeInYear + (1 | studyID/country)
-##    Data: Complete_Leg_data
 ## 
-## REML criterion at convergence: 43534.9
+## Family: gaussian 
+## Link function: identity 
 ## 
-## Scaled residuals: 
-##     Min      1Q  Median      3Q     Max 
-## -3.1004 -0.7399 -0.0515  0.6927  3.5627 
+## Formula:
+## HCT ~ s(AgeInYear) + s(studyID, bs = "re") + s(country, bs = "re")
 ## 
-## Random effects:
-##  Groups          Name        Variance Std.Dev.
-##  country:studyID (Intercept)  5.722   2.392   
-##  studyID         (Intercept)  7.322   2.706   
-##  Residual                    71.467   8.454   
-## Number of obs: 6116, groups:  country:studyID, 18; studyID, 6
+## Parametric coefficients:
+##             Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)    24.78       1.03   24.06   <2e-16 ***
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
-## Fixed effects:
-##             Estimate Std. Error t value
-## (Intercept) 24.69246    1.36141  18.137
-## AgeInYear    0.11159    0.01159   9.626
+## Approximate significance of smooth terms:
+##                 edf Ref.df      F  p-value    
+## s(AgeInYear)  7.426   8.27  44.50  < 2e-16 ***
+## s(studyID)    3.312   5.00  63.71   0.0638 .  
+## s(country)   12.798  14.00 153.55 4.72e-11 ***
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
-## Correlation of Fixed Effects:
-##           (Intr)
-## AgeInYear -0.185
+## R-sq.(adj) =  0.303   Deviance explained = 30.5%
+## GCV = 68.852  Scale est. = 68.575    n = 6116
 ```
 
 ![](LegacyAnalysis_files/figure-html/ExploratoryPlots-1.png)<!-- -->
@@ -412,7 +404,8 @@ Fitting a GAM here as we know the association is not linear in HCT (previously r
 ```r
 par(las=1, bty='n')
 Complete_Leg_data$country=as.factor(Complete_Leg_data$country)
-modHCT=gam(outcome ~ s(HCT) + s(studyID, bs='re') + s(country, bs='re'),data = Complete_Leg_data, family='binomial')
+modHCT=gam(outcome ~ s(HCT) + s(studyID, bs='re') + s(country, bs='re'),
+           data = Complete_Leg_data, family='binomial')
 summary(modHCT)
 ```
 
@@ -444,7 +437,7 @@ summary(modHCT)
 
 ```r
 preds = predict(modHCT, newdata = data.frame(HCT=5:45, studyID='AQ', country='Thailand', country=1), 
-                       exclude = c("s(country)","s(studyID)"), type='response', se.fit=T)
+                exclude = c("s(country)","s(studyID)"), type='response', se.fit=T)
 plot(5:45, 100*preds$fit, ylab='Probability death (%)', xlab='Haematocrit', 
      type='l', lwd=3,ylim = c(5,25))
 lines(5:45, 100*preds$fit + 100*2*preds$se.fit, lty=2,lwd=2)
