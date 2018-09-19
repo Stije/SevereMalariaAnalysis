@@ -189,6 +189,11 @@ for(i in 1:length(PIs)){
   Study_dat = data.frame(Coma = Comastatus[study_patients],
                          G6PD = G6PDstatus[study_patients],
                          Anaemia = Anaemiastatus[study_patients])
+  Study_dat$Coma = as.factor(Study_dat$Coma)
+  Study_dat$G6PD = as.factor(Study_dat$G6PD)
+  Study_dat$Anaemia = as.factor(Study_dat$Anaemia)
+  mod = glm(Coma ~ G6PD, data = Study_dat, family = 'binomial')
+  summary(mod)
   # odds ratio for coma
   O1 = sum(Study_dat$Coma=='Coma' & Study_dat$G6PD=='Normal')/sum(Study_dat$Coma=='No Coma' & Study_dat$G6PD=='Normal')
   O2 = sum(Study_dat$Coma=='Coma' & Study_dat$G6PD=='Def')/sum(Study_dat$Coma=='No Coma' & Study_dat$G6PD=='Def')

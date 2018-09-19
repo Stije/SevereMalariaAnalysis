@@ -1,0 +1,248 @@
+---
+title: "Charactersing effect of anaemia on mortality in severe malaria"
+output:
+  html_document:
+    keep_md: yes
+    fig_caption: yes
+---
+
+# Preliminaries
+
+
+```{r, echo=F}
+knitr::opts_chunk$set(cache = TRUE, cache.comments = FALSE, 
+                      echo = TRUE, include = TRUE, 
+                      fig.width = 7, fig.height = 7,
+                      fig.pos = 'H', 
+                      dev = 'png', dpi = 300)
+```
+
+```{r, echo=FALSE, include=FALSE}
+library(lme4)
+require(RColorBrewer)
+require(plyr)
+require(dplyr)
+library(mgcv) # For the GAM modelling
+```
+
+
+
+# Exploratory analysis
+
+
+This looks at the severe malaria legacy dataset from MORU.
+
+```{r, echo=FALSE}
+load('RData/Data.R')
+ind_missing = apply(m[,c('AgeInYear','HCT','BUN','BD','LPAR_pct')], 1, function(x) sum(is.na(x)>0))
+Leg_data_complete = m[!ind_missing,]
+Leg_data_complete = Leg_data_complete[!is.infinite(Leg_data_complete$LPAR_pct),]
+Leg_data_complete$studyID = as.factor(Leg_data_complete$studyID)# for plotting
+```
+
+
+
+First we look at the mortality rates across the different studies.
+
+```{r, echo=FALSE}
+for(s in unique(m$studyID)){
+  print(paste(s, ', mortality of:', round(100*mean(m$outcome[m$studyID==s])),'%'))
+}
+```
+
+We look at the quantiles of the ages in the different studies:
+```{r, echo=FALSE}
+for(s in unique(m$studyID)){
+  print(paste0(s, ', ages:', round(quantile(m$AgeInYear[m$studyID==s], probs = c(0,.5,1))), collapse = ' '))
+}
+
+for(s in unique(m$studyID)){
+  print(s)
+  print(table(m$drug[m$studyID==s]))
+}
+```
+
+
+Let's look at the linear associations between the key baseline variables. We use mixed effects linear models to estimate these associations (random effect terms for both country and study).
+
+```{r , echo=FALSE}
+mod_Age_HCT = gam(formula = HCT ~ s(AgeInYear)  + s(studyID, bs='re') + 
+                    s(country, bs='re'), 
+                  data = Leg_data_complete)
+mod_HCT_BD = gam(formula = BD ~ s(HCT) + s(studyID, bs='re') + 
+                   s(country, bs='re'), 
+                 data = Leg_data_complete)
+mod_BD_LPAR = gam(formula = BD ~ s(LPAR_pct) + s(studyID, bs='re') + 
+                     s(country, bs='re'),
+                   data =Leg_data_complete)
+mod_BUN_BD = gam(formula = BD ~ s(log10(BUN)) + s(studyID, bs='re') + 
+                   s(country, bs='re'),
+                 data =Leg_data_complete)
+
+```
+
+```{r ExploratoryPlots}
+mycols = brewer.pal(length(unique(m$studyID)), 'Set1')
+Leg_data_complete$color = as.character(revalue(Leg_data_complete$studyID, 
+                                      replace = c('Core Malaria'=mycols[1],
+                                                  'AAV'=mycols[2],
+                                                  'AQ'=mycols[3],
+                                                  'SEAQUAMAT' = mycols[4],
+                                                  'AQUAMAT' = mycols[5])))
+par(las=1, mfrow=c(2,2), mar=c(4,4,1,1), bty='n')
+## Base Excess and HCT
+plot(jitter(Leg_data_complete$HCT,amount=1), 
+     jitter(Leg_data_complete$BD), 
+     col=Leg_data_complete$color, pch='*', xlab='Haematocrit (%)', 
+     ylab='Base deficit (mEq/L)')
+
+ys = predict(object = mod_HCT_BD, 
+             newdata = data.frame(HCT=8:50,
+                                  studyID='AQ',
+                                  country='Vietnam'), 
+             exclude = c("s(country)","s(studyID)"))
+lines(8:50, ys, lwd=3, col='black')
+
+## Parasitaemia and Anaemia
+plot(jitter(Leg_data_complete$LPAR_pct,amount=1), 
+     Leg_data_complete$BD, 
+     col=Leg_data_complete$color, pch='*', 
+     xlab='Log10 % parasitised RBCs', 
+     ylab='Base deficit (mEq/L)')
+ys = predict(object = mod_BD_LPAR, 
+             newdata = data.frame(LPAR_pct=seq(-3,3,by=.1),
+                                  studyID='AQ',
+                                  country='Vietnam'), 
+             exclude = c("s(country)","s(studyID)"))
+lines(seq(-3,3,by=.1), ys, lwd=3, col='black')
+
+## BUN and BD
+plot(jitter(log10(Leg_data_complete$BUN),amount=.1), 
+     jitter(Leg_data_complete$BD), 
+     col=Leg_data_complete$color, pch='*', 
+     xlab='Blood urea nitrogen (mmol/L)', 
+     ylab='Base deficit (mEq/L)', xaxt='n')
+axis(1, at=c(log10(2), 1, 2), labels = c(2,10,100))
+
+summary(mod_BUN_BD)
+ys = predict(object = mod_BUN_BD, 
+             newdata = data.frame(BUN=2:166,
+                                  studyID='AQ',
+                                  country='Vietnam'), 
+             exclude = c("s(country)","s(studyID)"))
+lines(log10(2:166), ys, lwd=3, col='black')
+
+## Parasitaemia and Anaemia
+plot(jitter(Leg_data_complete$AgeInYear,amount=1), 
+     Leg_data_complete$HCT, 
+     col=Leg_data_complete$color, pch='*', 
+     xlab='Age (years)', 
+     ylab='Haematocrit (%)')
+
+summary(mod_Age_HCT)
+ys = predict(object = mod_Age_HCT, 
+             newdata = data.frame(AgeInYear=0:80,
+                                  studyID='AQ',
+                                  country='Vietnam'), 
+             exclude = c("s(country)","s(studyID)"))
+lines(0:80, ys, lwd=3, col='black')
+```
+
+
+
+# Imputation of missing variables
+
+Quite a lot of the important covariates are missing in the older studies. We use linear regression to estimate these unknown variables. This section shows the results for single imputation - when fitting the final models we use multiple imputation.
+
+* Mising base deficit is imputed using bicarbonate (if available) else using respiratory rate
+* Missing Blood urea nitrogen is imputed using creatinine
+
+Impute base deficit from bicarbonate
+```{r}
+BD_and_bicarbonate = !is.na(m$BD) & !is.na(m$bicarbonate)
+print(paste('We have ', sum(BD_and_bicarbonate), 'observations for both bicarbonate and base deficit'))
+mod_impute1 = lmer(BD ~ bicarbonate + (1 | studyID) + (1 | country), data= m[BD_and_bicarbonate,])
+missing_BD = is.na(m$BD)
+Available_Bicarbonate = !is.na(m$bicarbonate)
+print(paste(sum(missing_BD & Available_Bicarbonate), 'observations will now be imputed'))
+# impute with model
+m$BD[missing_BD & Available_Bicarbonate] = predict(mod_impute1,newdata=m[missing_BD & Available_Bicarbonate,], re.form=NA)
+```
+
+Impute base deficit from lactate
+```{r}
+BD_and_lactate = !is.na(m$BD) & !is.na(m$lactate)
+print(paste('We have ', sum(BD_and_lactate), 'observations for both lactate and base deficit'))
+if(length(unique(m$studyID[BD_and_lactate]))==1){
+  mod_impute2 = lm(BD ~ lactate, data= m[BD_and_lactate,])
+} else {
+  mod_impute2 = lmer(BD ~ lactate + (1 | studyID), data= m[BD_and_lactate,])
+}
+missing_BD = is.na(m$BD)
+Available_Lactate = !is.na(m$lactate)
+print(paste(sum(missing_BD & Available_Lactate), 'observations will now be imputed'))
+# impute with model
+m$BD[missing_BD & Available_Lactate] = predict(mod_impute2,newdata=m[missing_BD & Available_Lactate,], re.form=NA)
+```
+
+Impute base deficit from respiratory rate
+```{r}
+BD_and_rr = !is.na(m$BD) & !is.na(m$rr)
+print(paste('We have ', sum(BD_and_rr), 'observations for both resp rate and base deficit'))
+mod_impute3 = lmer(BD ~ rr + (1 | studyID), data= m[BD_and_rr,])
+missing_BD = is.na(m$BD)
+Available_rr = !is.na(m$rr)
+print(paste(sum(missing_BD & Available_rr), 'observations will now be imputed'))
+m$BD[missing_BD & Available_rr] = predict(mod_impute3,newdata=m[missing_BD & Available_rr,], re.form=NA)
+```
+
+
+Impute blood urea nitrogen from creatinine:
+```{r}
+BUN_and_cr = !is.na(m$BUN) & !is.na(m$creatinine)
+print(paste('We have ', sum(BUN_and_cr), 'observations for both blood urea nitrogen and creatinine'))
+mod_impute4 = lmer(BUN ~ creatinine + (1 | studyID), data= m[BUN_and_cr,])
+missing_BUN = is.na(m$BUN)
+Available_cr = !is.na(m$creatinine)
+print(paste(sum(missing_BUN & Available_cr), 'observations will now be imputed'))
+m$BUN[missing_BUN & Available_cr] = predict(mod_impute4,newdata=m[missing_BUN & Available_cr,], re.form=NA)
+```
+
+Resulting data we can now use:
+The contributions of the different studies:
+```{r}
+vars_interest = c('outcome','HCT','LPAR_pct','BD','BUN','poedema',
+                  'convulsions','coma','AgeInYear','drug_class')
+complete_cases = apply(m[,vars_interest], 1, function(x) sum(is.na(x))) == 0
+Complete_Leg_data = m[complete_cases,] # for the model fitting
+Complete_Leg_data$studyID = as.factor(as.character(Complete_Leg_data$studyID))
+# Whole dataset
+table(m$studyID)
+# in the complete dataset (all variables recorded)
+table(Complete_Leg_data$studyID)
+Complete_Leg_data$drug_AS = 0
+Complete_Leg_data$drug_AS[Complete_Leg_data$drug_class=='artemisinin']=1
+
+# remove infinite log parasitaemias
+ind_keep = !(is.infinite(Complete_Leg_data$LPAR_pct) | is.nan(Complete_Leg_data$LPAR_pct))
+Complete_Leg_data = Complete_Leg_data[ind_keep,]
+```
+
+Data summaries
+```{r}
+Africa = c('The Gambia','Mozambique','Ghana','Kenya','Nigeria','Tanzania','Uganda','Rwanda','Congo')
+Asia = c('Thailand','Vietnam','Bangladesh','Myanmar','India','Indonesia')
+writeLines(paste('Children in Africa:',
+                 sum(m$AgeInYear < 15 & m$country %in% Africa)))
+writeLines(paste('Adults in Africa:',
+                 sum(m$AgeInYear >= 15 & m$country %in% Africa)))
+
+writeLines(paste('Children in Asia:',
+                 sum(m$AgeInYear < 15 & m$country %in% Asia)))
+writeLines(paste('Adults in Asia:',
+                 sum(m$AgeInYear >= 15 & m$country %in% Asia)))
+
+```
+
+
+

@@ -12,6 +12,8 @@ knitr::opts_chunk$set(cache = TRUE, cache.comments = FALSE,
                       fig.width = 7, fig.height = 7,
                       fig.pos = 'H', 
                       dev = 'png', dpi = 300)
+
+RUN_M_IMPUTATION = F
 ```
 
 # Background
@@ -22,9 +24,12 @@ This looks at the severe malaria legacy dataset from MORU
 load('RData/Data.R')
 # some basic data cleaning - probably should move this to the MakeRData r script
 m$drug_class = as.factor(m$drug_class)
-rm_ind = is.na(m$outcome) | is.na(m$studyID)
+rm_ind = is.na(m$outcome) | is.na(m$studyID) | m$studyID %in% 'AQGambia' | is.na(m$AgeInYear)
 m = m[!rm_ind, ]
 m$BUN[m$BUN > 140] = 140
+
+m$drug_AS = 0
+m$drug_AS[m$drug_class=='artemisinin']=1
 Leg_data = m[,]  # for the plotting
 ```
 
@@ -35,9 +40,14 @@ Leg_data = m[,]  # for the plotting
 library(lme4)
 library(mgcv)
 require(boot)
+require(doParallel)
+require(mitools)
+require(missForest)
+library(plyr)
+library(merTools)
 ```
 
-# Imputation of missing variables
+# Single imputation of missing variables
 
 Quite a lot of the important covariates are missing in the older studies. We use linear regression to estimate these unknown variables. This section shows the results for single imputation - when fitting the final models we use multiple imputation.
 
@@ -107,8 +117,7 @@ Complete_Leg_data$studyID = as.factor(as.character(Complete_Leg_data$studyID))
 table(Leg_data$studyID)
 # in the complete dataset (all variables recorded)
 table(Complete_Leg_data$studyID)
-Complete_Leg_data$drug_AS = 0
-Complete_Leg_data$drug_AS[Complete_Leg_data$drug_class=='artemisinin']=1
+
 
 # remove infinite log parasitaemias
 ind_keep = !(is.infinite(Complete_Leg_data$LPAR_pct) | is.nan(Complete_Leg_data$LPAR_pct))
@@ -127,17 +136,52 @@ Data summaries
 Africa = c('The Gambia','Mozambique','Ghana','Kenya','Nigeria','Tanzania','Uganda','Rwanda','Congo')
 Asia = c('Thailand','Vietnam','Bangladesh','Myanmar','India','Indonesia')
 writeLines(paste('Children in Africa:',
-                 sum(Complete_Leg_data$AgeInYear < 15 & Complete_Leg_data$country %in% Africa)))
+                 sum(m$AgeInYear < 15 & m$country %in% Africa)))
 writeLines(paste('Adults in Africa:',
-                 sum(Complete_Leg_data$AgeInYear >= 15 & Complete_Leg_data$country %in% Africa)))
+                 sum(m$AgeInYear >= 15 & m$country %in% Africa)))
 
 writeLines(paste('Children in Asia:',
-                 sum(Complete_Leg_data$AgeInYear < 15 & Complete_Leg_data$country %in% Asia)))
+                 sum(m$AgeInYear < 15 & m$country %in% Asia)))
 writeLines(paste('Adults in Asia:',
-                 sum(Complete_Leg_data$AgeInYear >= 15 & Complete_Leg_data$country %in% Asia)))
+                 sum(m$AgeInYear >= 15 & m$country %in% Asia)))
 
 ```
 
+### Multiple imputation using missForest
+```{r}
+apply(m,2, function(x) sum(is.na(x)))
+```
+
+```{r}
+m$LPAR_pct[is.infinite(m$LPAR_pct)] = 0
+m$drug_class = as.factor(m$drug_class)
+m$poedema = as.factor(m$poedema)
+m$coma = as.factor(m$coma)
+m$convulsions = as.factor(m$convulsions)
+```
+
+```{r, include=FALSE}
+if(RUN_M_IMPUTATION){
+  registerDoParallel(cores = 6)
+  impute_vars = c('shock','coma','LPAR_pct','BD','BUN','poedema','HCT',
+                  'convulsions',"AgeInYear",
+                  'rr', 'lactate', 'bicarbonate', 'creatinine')
+  SM_Impute_List = list()
+  K = 210
+  for(i in 1:K){
+    Imputed_SM_vars = missForest(xmis = m[,impute_vars], decreasing = T,
+                                 maxiter = 10, 
+                                 variablewise = T,parallelize = 'forests')
+    SM_data = Imputed_SM_vars$ximp
+    SM_data = cbind(SM_data, m[,c('outcome','studyID','country','drug_AS')])
+    SM_Impute_List[[i]] = SM_data
+  }
+  
+  save(SM_Impute_List, file = 'RData/Multiple_Imputed_Datasets.RData')
+} else {
+  load(file = 'RData/Multiple_Imputed_Datasets.RData')
+}
+```
 
 
 # Unadjusted associations for death
@@ -258,13 +302,20 @@ polygon(c(x_poedema,rev(x_poedema)),
 
 
 
-
-
 ```{r deathmodel_glm}
-mod_Adj = glmer(outcome ~ HCT + LPAR_pct + coma + convulsions +
-                  poedema + log10(BUN) + BD + shock + drug_AS + 
-                  AgeInYear + (1 | studyID) + (1 | country),
-                data = Complete_Leg_data, family=binomial)
+
+DAG_fmla = "outcome ~ HCT + LPAR_pct + coma + convulsions + poedema + log10(BUN) + BD + shock + drug_AS + (1 | studyID) + (1 | country)"
+modList= glmerModList(DAG_fmla, data = SM_Impute_List, family=binomial) 
+Effs = modelFixedEff(modList)
+Scalar_f = c(1, 5, 1, 1, 1, 10, 1, 1, 1, 1)
+Results = data.frame(lowerCI = exp(Scalar_f*(Effs$estimate - 1.96*Effs$std.error)),
+                     mean = exp(Scalar_f*(Effs$estimate)),
+                     upperCI = exp(Scalar_f*(Effs$estimate + 1.96*Effs$std.error)))
+rownames(Results) = Effs$term
+Results
+modelRandEffStats(modList)
+
+
 summary(mod_Adj)
 ```
 
@@ -509,6 +560,21 @@ We add a random effect term for the studyID and a random effect term for the cou
 This should be adjusting for a confounder of quality of care (which potentially impacts both general anaemia and outcome in study).
 
 ```{r deathmodel_GAM}
+
+DAG_fmla = "outcome ~ HCT + LPAR_pct + coma + convulsions + poedema + log10(BUN) + BD + shock + drug_AS + (1 | studyID) + (1 | country)"
+modList= glmerModList(DAG_fmla, data = SM_Impute_List, family=binomial) 
+Effs = modelFixedEff(modList)
+Scalar_f = c(1, 5, 1, 1, 1, 10, 1, 1, 1, 1)
+Results = data.frame(lowerCI = exp(Scalar_f*(Effs$estimate - 1.96*Effs$std.error)),
+                     mean = exp(Scalar_f*(Effs$estimate)),
+                     upperCI = exp(Scalar_f*(Effs$estimate + 1.96*Effs$std.error)))
+rownames(Results) = Effs$term
+Results
+modelRandEffStats(modList)
+
+
+summary(mod_Adj)
+
 mod_Adj_GAM = gam(outcome ~ s(HCT) + LPAR_pct + coma + convulsions +
                     poedema + s(log10(BUN)) + s(BD) + shock + 
                     drug_AS + AgeInYear + 
@@ -527,7 +593,7 @@ for(i in 1:length(x_hcts)){
   mydata = Complete_Leg_data
   mydata$HCT=x_hcts[i]
   preds = predict(mod_Adj_GAM, newdata = mydata,  type='response', se.fit = T)
-  ys = preds$fit
+  ys = 100*preds$fit
   BSmed = boot(data = ys, statistic = fmed, R = 300)
   BS25 = boot(data = ys, statistic = f25, R = 300)
   BS75 = boot(data = ys, statistic = f75, R = 300)

@@ -2,3 +2,7 @@
 *.nb.html
 *.pdf
 *.html
+/*_cache/
+/cache/
+
+

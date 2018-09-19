@@ -1,7 +1,9 @@
 # Severe Malaria
 
-This runs the data analysis reported in ``The effect of anaemia on mortality in severe falciparum malaria''.
+This runs the data analysis reported in ``Causal inference methods for severe malaria studies''.
 
-`Legacy_Analysis.md` is the main data-analysis notebook.
+`Exploratory_Analysis_and _Sensitivity.md` runs some basic data exploration and a sensitivity analysis to the main analysis
+
+`FactorsCausingDeath` runs the main analysis looking at the contribution of the main factors in severe malaria to survival
 
 `SelectionBiasSimulation.md` runs the simulation model showing the effect of selection bias in severe malaria studies.
