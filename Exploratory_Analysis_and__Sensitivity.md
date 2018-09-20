@@ -87,11 +87,11 @@ Let's look at the linear associations between the key baseline variables. We use
 ```r
 mycols = brewer.pal(length(unique(m$studyID)), 'Set1')
 Leg_data_complete$color = as.character(revalue(Leg_data_complete$studyID, 
-                                      replace = c('Core Malaria'=mycols[1],
-                                                  'AAV'=mycols[2],
-                                                  'AQ'=mycols[3],
-                                                  'SEAQUAMAT' = mycols[4],
-                                                  'AQUAMAT' = mycols[5])))
+                                               replace = c('Core Malaria'=mycols[1],
+                                                           'AAV'=mycols[2],
+                                                           'AQ'=mycols[3],
+                                                           'SEAQUAMAT' = mycols[4],
+                                                           'AQUAMAT' = mycols[5])))
 ```
 
 ```
@@ -214,13 +214,43 @@ ys = predict(object = mod_Age_HCT,
                                   country='Vietnam'), 
              exclude = c("s(country)","s(studyID)"))
 lines(0:80, ys, lwd=3, col='black')
+legend('topright',col=mycols,legend = c('Core Malaria',
+                                        'AAV',
+                                        'AQ',
+                                        'SEAQUAMAT',
+                                        'AQUAMAT'),pch='*')
 ```
 
 ![](Exploratory_Analysis_and__Sensitivity_files/figure-html/ExploratoryPlots-1.png)<!-- -->
 
+Effect on survival 
 
 
-# Imputation of missing variables
+```r
+modHCT=gam(outcome ~ s(HCT) + s(studyID, bs='re') + s(country, bs='re'),
+           data = Leg_data_complete, family='binomial')
+
+modcoma=gam(outcome ~ coma + s(studyID, bs='re') + s(country, bs='re'),
+            data = Leg_data_complete, family='binomial')
+
+modBD=gam(outcome ~ s(BD) + s(studyID, bs='re') + s(country, bs='re'),
+          data = Leg_data_complete, family='binomial')
+
+modpoedema=gam(outcome ~ poedema + s(studyID, bs='re') + s(country, bs='re'),
+               data = Leg_data_complete, family='binomial')
+
+modconv=gam(outcome ~ convulsions + s(studyID, bs='re') + s(country, bs='re'),
+            data = Leg_data_complete, family='binomial')
+
+modBUN=gam(outcome ~ s(log10(BUN)) + s(studyID, bs='re') + s(country, bs='re'),
+           data = Leg_data_complete, family='binomial')
+```
+
+![](Exploratory_Analysis_and__Sensitivity_files/figure-html/UnadjustedPlots-1.png)<!-- -->
+
+# Sensitivity Analysis
+
+## Imputation of missing variables
 
 Quite a lot of the important covariates are missing in the older studies. We use linear regression to estimate these unknown variables. This section shows the results for single imputation - when fitting the final models we use multiple imputation.
 
@@ -418,4 +448,47 @@ writeLines(paste('Adults in Asia:',
 ```
 
 
+
+```r
+mod_full_GAM = gam(outcome ~ s(HCT,AgeInYear) + LPAR_pct  + coma + convulsions +
+                     poedema + log10(BUN) + BD + drug_AS + 
+                     s(studyID, bs='re') + s(country, bs='re'),
+                   data=Complete_Leg_data, family=binomial)
+summary(mod_full_GAM)
+```
+
+```
+## 
+## Family: binomial 
+## Link function: logit 
+## 
+## Formula:
+## outcome ~ s(HCT, AgeInYear) + LPAR_pct + coma + convulsions + 
+##     poedema + log10(BUN) + BD + drug_AS + s(studyID, bs = "re") + 
+##     s(country, bs = "re")
+## 
+## Parametric coefficients:
+##               Estimate Std. Error z value Pr(>|z|)    
+## (Intercept)  -6.329109   0.271587 -23.304  < 2e-16 ***
+## LPAR_pct     -0.006194   0.060809  -0.102 0.918869    
+## coma          1.332485   0.101673  13.106  < 2e-16 ***
+## convulsions1  0.527219   0.118296   4.457 8.32e-06 ***
+## poedema1      0.554431   0.384323   1.443 0.149129    
+## log10(BUN)    1.712847   0.171026  10.015  < 2e-16 ***
+## BD            0.123154   0.007423  16.592  < 2e-16 ***
+## drug_AS      -0.347898   0.091972  -3.783 0.000155 ***
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Approximate significance of smooth terms:
+##                       edf Ref.df Chi.sq  p-value    
+## s(HCT,AgeInYear) 5.235025  7.296 32.947 3.47e-05 ***
+## s(studyID)       0.003429  4.000  0.003    0.403    
+## s(country)       9.951536 14.000 76.078 1.11e-15 ***
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## R-sq.(adj) =  0.277   Deviance explained = 29.9%
+## UBRE = -0.44222  Scale est. = 1         n = 5948
+```
 

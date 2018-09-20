@@ -20,6 +20,7 @@ knitr::opts_chunk$set(cache = TRUE, cache.comments = FALSE,
 ```{r, echo=FALSE, include=FALSE}
 library(lme4)
 require(RColorBrewer)
+require(boot)
 require(plyr)
 require(dplyr)
 library(mgcv) # For the GAM modelling
@@ -34,7 +35,7 @@ This looks at the severe malaria legacy dataset from MORU.
 
 ```{r, echo=FALSE}
 load('RData/Data.R')
-ind_missing = apply(m[,c('AgeInYear','HCT','BUN','BD','LPAR_pct')], 1, function(x) sum(is.na(x)>0))
+ind_missing = apply(m[,c('AgeInYear','HCT','BUN','BD','LPAR_pct')], 1, function(x) sum(is.na(x))>0)
 Leg_data_complete = m[!ind_missing,]
 Leg_data_complete = Leg_data_complete[!is.infinite(Leg_data_complete$LPAR_pct),]
 Leg_data_complete$studyID = as.factor(Leg_data_complete$studyID)# for plotting
@@ -73,8 +74,8 @@ mod_HCT_BD = gam(formula = BD ~ s(HCT) + s(studyID, bs='re') +
                    s(country, bs='re'), 
                  data = Leg_data_complete)
 mod_BD_LPAR = gam(formula = BD ~ s(LPAR_pct) + s(studyID, bs='re') + 
-                     s(country, bs='re'),
-                   data =Leg_data_complete)
+                    s(country, bs='re'),
+                  data =Leg_data_complete)
 mod_BUN_BD = gam(formula = BD ~ s(log10(BUN)) + s(studyID, bs='re') + 
                    s(country, bs='re'),
                  data =Leg_data_complete)
@@ -84,11 +85,11 @@ mod_BUN_BD = gam(formula = BD ~ s(log10(BUN)) + s(studyID, bs='re') +
 ```{r ExploratoryPlots}
 mycols = brewer.pal(length(unique(m$studyID)), 'Set1')
 Leg_data_complete$color = as.character(revalue(Leg_data_complete$studyID, 
-                                      replace = c('Core Malaria'=mycols[1],
-                                                  'AAV'=mycols[2],
-                                                  'AQ'=mycols[3],
-                                                  'SEAQUAMAT' = mycols[4],
-                                                  'AQUAMAT' = mycols[5])))
+                                               replace = c('Core Malaria'=mycols[1],
+                                                           'AAV'=mycols[2],
+                                                           'AQ'=mycols[3],
+                                                           'SEAQUAMAT' = mycols[4],
+                                                           'AQUAMAT' = mycols[5])))
 par(las=1, mfrow=c(2,2), mar=c(4,4,1,1), bty='n')
 ## Base Excess and HCT
 plot(jitter(Leg_data_complete$HCT,amount=1), 
@@ -146,11 +147,134 @@ ys = predict(object = mod_Age_HCT,
                                   country='Vietnam'), 
              exclude = c("s(country)","s(studyID)"))
 lines(0:80, ys, lwd=3, col='black')
+legend('topright',col=mycols,legend = c('Core Malaria',
+                                        'AAV',
+                                        'AQ',
+                                        'SEAQUAMAT',
+                                        'AQUAMAT'),pch='*')
 ```
 
+Effect on survival 
 
+```{r UnAdjusted}
+modHCT=gam(outcome ~ s(HCT) + s(studyID, bs='re') + s(country, bs='re'),
+           data = Leg_data_complete, family='binomial')
 
-# Imputation of missing variables
+modcoma=gam(outcome ~ coma + s(studyID, bs='re') + s(country, bs='re'),
+            data = Leg_data_complete, family='binomial')
+
+modBD=gam(outcome ~ s(BD) + s(studyID, bs='re') + s(country, bs='re'),
+          data = Leg_data_complete, family='binomial')
+
+modpoedema=gam(outcome ~ poedema + s(studyID, bs='re') + s(country, bs='re'),
+               data = Leg_data_complete, family='binomial')
+
+modconv=gam(outcome ~ convulsions + s(studyID, bs='re') + s(country, bs='re'),
+            data = Leg_data_complete, family='binomial')
+
+modBUN=gam(outcome ~ s(log10(BUN)) + s(studyID, bs='re') + s(country, bs='re'),
+           data = Leg_data_complete, family='binomial')
+```
+
+```{r UnadjustedPlots, echo=FALSE}
+par(las=1, bty='n', mfrow=c(2,3))
+
+Factors = c('HCT','coma','BD','poedema','convulsions','BUN')
+x_hcts = seq(4,45, by=1)
+x_comas = 0:1
+x_conv = 0:1
+x_poedema = 0:1
+x_bd = seq(-22,35, by=2)
+x_BUN = seq(2,150, length.out = 2)
+
+#************** BD
+predsBD = predict(modBD, newdata = data.frame(BD= x_bd, 
+                                              studyID='AQ', 
+                                              country='Thailand'), 
+                  exclude = c("s(country)","s(studyID)"), 
+                  se.fit=T)
+plot(x_bd, 100*inv.logit(predsBD$fit), ylab='%', xlab='Base deficit (mEq/L)', 
+     type='l', lwd=3,ylim = c(0,100))
+polygon(c(x_bd, rev(x_bd)), 100*inv.logit(c(predsBD$fit + 1.96*predsBD$se.fit,
+                                            rev(predsBD$fit - 1.96*predsBD$se.fit))),
+        lty=2,lwd=2, border = NA, col = rgb(0, 0, 1,0.5))
+
+#************** HCT
+predsHCT = predict(modHCT, 
+                   newdata = data.frame(HCT=x_hcts, 
+                                        studyID='AQ', 
+                                        country='Thailand'), 
+                   exclude = c("s(country)","s(studyID)"), 
+                   se.fit=T)
+plot(x_hcts, 100*inv.logit(predsHCT$fit), ylab='%', xlab='Haematocrit (%)', 
+     type='l', lwd=3,ylim = c(5,37))
+polygon(c(x_hcts,rev(x_hcts)), 
+        100*inv.logit(c(predsHCT$fit + 1.96*predsHCT$se.fit, 
+                        rev(predsHCT$fit - 1.96*predsHCT$se.fit))),
+        lty=2,lwd=2,border = NA, col = rgb(0, 0, 1,0.5))
+
+#************** BUN
+predsBUN = predict(modBUN, newdata = data.frame(BUN=x_BUN, 
+                                                studyID='AQ', 
+                                                country='Thailand'), 
+                   exclude = c("s(country)","s(studyID)"), 
+                   se.fit=T)
+plot(log10(x_BUN), 100*inv.logit(predsBUN$fit), ylab='%', 
+     xlab='Blood urea nitrogen (mmol/L)', 
+     type='l', lwd=3,ylim = c(0,60), xaxt='n')
+axis(1, at = log10(c(2,10,100)), labels = c(2,10,100))
+polygon(c(log10(x_BUN),rev(log10(x_BUN))), 
+        100*inv.logit(c(predsBUN$fit + 1.96*predsBUN$se.fit,
+                        rev(predsBUN$fit - 1.96*predsBUN$se.fit))), 
+        lty=2,lwd=2, border = NA, col = rgb(0, 0, 1,0.5))
+
+#**************  Coma
+predscoma = predict(modcoma, newdata = data.frame(coma=x_comas, 
+                                                  studyID='AQ', 
+                                                  country='Thailand'), 
+                    exclude = c("s(country)","s(studyID)"), 
+                    se.fit=T)
+plot(x_comas, 100*inv.logit(predscoma$fit), ylab='%', xlab='', 
+     type='l', lwd=3, ylim = c(0,26), xaxt='n')
+axis(1, at=x_comas, labels = c('No Coma','Coma'))
+polygon(c(x_comas,rev(x_comas)), 
+        100*inv.logit(c(predscoma$fit + 1.96*predscoma$se.fit,
+                        rev(predscoma$fit -1.96*predscoma$se.fit))),
+        lty=2,lwd=2, border = NA, col = rgb(0, 0, 1,0.5))
+
+#************** Convulsions
+predsconv = predict(modconv, newdata = data.frame(convulsions=x_conv, 
+                                                  studyID='AQ', 
+                                                  country='Thailand'), 
+                    exclude = c("s(country)","s(studyID)"), 
+                    se.fit=T)
+plot(x_conv, 100*inv.logit(predsconv$fit), ylab='%', xlab='', 
+     type='l', lwd=3, ylim = c(0,30), xaxt='n')
+axis(1, at=x_conv, labels = c('No convulsions','Convulsions'))
+polygon(c(x_conv,rev(x_conv)), 
+        100*inv.logit(c(predsconv$fit + 1.96*predsconv$se.fit,
+                        rev(predsconv$fit -1.96*predsconv$se.fit))),
+        lty=2,lwd=2, border = NA, col = rgb(0, 0, 1,0.5))
+
+#************** Pulmonary Oedema
+predspoedema = predict(modpoedema, 
+                       newdata = data.frame(poedema=x_poedema, 
+                                            studyID='AQ', 
+                                            country='Thailand'), 
+                       exclude = c("s(country)","s(studyID)"), 
+                       se.fit=T)
+plot(x_poedema, 100*inv.logit(predspoedema$fit), ylab='%', xlab='', 
+     type='l', lwd=3, ylim = c(0,55), xaxt='n')
+axis(1, at=x_poedema, labels = c('No PO','PO'))
+polygon(c(x_poedema,rev(x_poedema)), 
+        100*inv.logit(c(predspoedema$fit + 1.96*predspoedema$se.fit,
+          rev(predspoedema$fit - 1.96*predspoedema$se.fit))),
+        lty=2,lwd=2, border = NA, col = rgb(0, 0, 1,0.5))
+```
+
+# Sensitivity Analysis
+
+## Imputation of missing variables
 
 Quite a lot of the important covariates are missing in the older studies. We use linear regression to estimate these unknown variables. This section shows the results for single imputation - when fitting the final models we use multiple imputation.
 
@@ -245,4 +369,11 @@ writeLines(paste('Adults in Asia:',
 ```
 
 
+```{r}
+mod_full_GAM = gam(outcome ~ s(HCT,AgeInYear) + LPAR_pct  + coma + convulsions +
+                     poedema + log10(BUN) + BD + drug_AS + 
+                     s(studyID, bs='re') + s(country, bs='re'),
+                   data=Complete_Leg_data, family=binomial)
+summary(mod_full_GAM)
+```
 
