@@ -14,6 +14,7 @@ knitr::opts_chunk$set(cache = TRUE, cache.comments = FALSE,
                       dev = 'png', dpi = 300)
 
 RUN_M_IMPUTATION = F
+RUN_MODELS = F
 ```
 
 # Background
@@ -31,12 +32,7 @@ m$drug_AS[m$drug_class=='artemisinin']=1
 
 ```{r, echo=FALSE, include=FALSE}
 library(lme4)
-library(mgcv)
-require(boot)
-require(doParallel)
-require(mitools)
 require(missForest)
-library(plyr)
 library(merTools)
 ```
 
@@ -60,26 +56,31 @@ writeLines(paste('Adults in Asia:',
 
 ### Multiple imputation using missForest
 
+The number of missing variables in the pooled data:
 ```{r}
 apply(m,2, function(x) sum(is.na(x)))
 ```
 
+We make a few data adjustments for the model imputation and fitting:
 ```{r}
 m$LPAR_pct[is.infinite(m$LPAR_pct)] = 0
 m$drug_class = as.factor(m$drug_class)
 m$poedema = as.factor(m$poedema)
 m$coma = as.factor(m$coma)
 m$convulsions = as.factor(m$convulsions)
+m$transfusion = as.factor(m$transfusion)
 ```
 
+We run the multiple imputation using missForest
 ```{r, include=FALSE}
+# This takes a long time to run....
 if(RUN_M_IMPUTATION){
   registerDoParallel(cores = 6)
   impute_vars = c('shock','coma','LPAR_pct','BD','BUN','poedema','HCT',
-                  'convulsions',"AgeInYear",
-                  'rr', 'lactate', 'bicarbonate', 'creatinine')
+                  'convulsions',"AgeInYear","paraul","parc","LPAR","transfusion",
+                  'rr', 'lactate', 'bicarbonate', 'creatinine',"hypoglycaemia")
   SM_Impute_List = list()
-  K = 210
+  K = 150
   for(i in 1:K){
     Imputed_SM_vars = missForest(xmis = m[,impute_vars], decreasing = T,
                                  maxiter = 10, 
@@ -96,520 +97,88 @@ if(RUN_M_IMPUTATION){
 ```
 
 
-# Unadjusted associations for death
+# Logistic regression model
 
-
-
-
-
-
-
-
+We fit the full model with adjustments as specified in the Methods section:
 ```{r deathmodel_glm}
-
-DAG_fmla = "outcome ~ HCT + LPAR_pct + coma + convulsions + poedema + log10(BUN) + BD + shock + drug_AS + (1 | studyID) + (1 | country)"
-modList= glmerModList(DAG_fmla, data = SM_Impute_List, family=binomial) 
-Effs = modelFixedEff(modList)
-Scalar_f = c(1, 5, 1, 1, 1, 10, 1, 1, 1, 1)
-Results = data.frame(lowerCI = exp(Scalar_f*(Effs$estimate - 1.96*Effs$std.error)),
-                     mean = exp(Scalar_f*(Effs$estimate)),
-                     upperCI = exp(Scalar_f*(Effs$estimate + 1.96*Effs$std.error)))
-rownames(Results) = Effs$term
-Results
-modelRandEffStats(modList)
-
-
-summary(mod_Adj)
+if(RUN_MODELS){
+  # the model formula
+  DAG_fmla = "outcome ~ HCT + LPAR_pct + coma + convulsions + poedema + 
+              log2(BUN) + BD + shock + hypoglycaemia + 
+              drug_AS + (1 | studyID) + (1 | country)"
+  # fit the model to each dataset
+  modList= glmerModList(DAG_fmla, data = SM_Impute_List, family=binomial,parallel = T) 
+  # save the output
+  save(modList, file = 'RData/Models_List.RData')
+} else {
+  load('RData/Models_List.RData')
+}
 ```
 
-Some summary functions we need
+Compute the overall parameter estimates:
 ```{r}
-fmed = function(x, ind){
-  return(median(x[ind]))
-}
-f25 = function(x, ind){
-  return(quantile(x[ind], probs = 0.25))
-}
-f75 = function(x, ind){
-  return(quantile(x[ind], probs = 0.75))
-}
+# extract the fixed and random effects from all the model fits
+# These functions then compute the overall estimates
+FixedEffs = modelFixedEff(modList)
+RandEffs = modelRandEffStats(modList)
+print(FixedEffs)
+print(RandEffs)
 ```
 
-Now let's make counterfactual retrodictions of anaemia on death for the patients in the database.
-
-```{r counterfactualMortality}
-myquantiles = c(0.025,0.5,0.975) # this is for a 95% CI
-ys = 100*predict(mod_Adj, type='response')
-BS = boot(data = ys, statistic = fmed, R = 300)
-overall_median_mortality = quantile(BS$t, probs = myquantiles)
-```
-
-
-
-Compute the counterfactual outcomes:
-
+Aggregate results for plotting:
 ```{r}
-#*********HCT
-HCT_CFs = array(dim = c(9, length(x_hcts)))
-for(i in 1:length(x_hcts)){
-  mydata = Complete_Leg_data
-  mydata$HCT=x_hcts[i]
-  ys = 100*predict(mod_Adj, newdata = mydata,  type='response')
-  BSmed = boot(data = ys, statistic = fmed, R = 300)
-  BS25 = boot(data = ys, statistic = f25, R = 300)
-  BS75 = boot(data = ys, statistic = f75, R = 300)
-  
-  HCT_CFs[,i] = c(quantile(BS25$t, probs = myquantiles),
-                  quantile(BSmed$t, probs = myquantiles),
-                  quantile(BS75$t, probs = myquantiles))
-}
-#*********BD
-BD_CFs = array(dim = c(9, length(x_bd)))
-for(i in 1:length(x_bd)){
-  mydata = Complete_Leg_data
-  mydata$BD=x_bd[i]
-  ys = 100*predict(mod_Adj, newdata = mydata, type='response')
-  BSmed = boot(data = ys, statistic = fmed, R = 300)
-  BS25 = boot(data = ys, statistic = f25, R = 300)
-  BS75 = boot(data = ys, statistic = f75, R = 300)
-  
-  BD_CFs[,i] = c(quantile(BS25$t, probs = myquantiles),
-                 quantile(BSmed$t, probs = myquantiles),
-                 quantile(BS75$t, probs = myquantiles))
-}
-#*********BUN
-BUN_CFs = array(dim = c(9, length(x_BUN)))
-for(i in 1:length(x_BUN)){
-  mydata = Complete_Leg_data
-  mydata$BUN=x_BUN[i]
-  ys = 100*predict(mod_Adj, newdata = mydata,  type='response')
-  BSmed = boot(data = ys, statistic = fmed, R = 300)
-  BS25 = boot(data = ys, statistic = f25, R = 300)
-  BS75 = boot(data = ys, statistic = f75, R = 300)
-  
-  BUN_CFs[,i] = c(quantile(BS25$t, probs = myquantiles),
-                  quantile(BSmed$t, probs = myquantiles),
-                  quantile(BS75$t, probs = myquantiles))
-}
-#*********Coma
-coma_CFs = array(dim = c(9, length(x_comas)))
-for(i in 1:length(x_comas)){
-  mydata = Complete_Leg_data
-  mydata$coma=x_comas[i]
-  ys = 100*predict(mod_Adj, newdata = mydata,  type='response')
-  BSmed = boot(data = ys, statistic = fmed, R = 300)
-  BS25 = boot(data = ys, statistic = f25, R = 300)
-  BS75 = boot(data = ys, statistic = f75, R = 300)
-  
-  coma_CFs[,i] = c(quantile(BS25$t, probs = myquantiles),
-                   quantile(BSmed$t, probs = myquantiles),
-                   quantile(BS75$t, probs = myquantiles))
-}
-#*********poedema
-PO_CFs = array(dim = c(9, length(x_poedema)))
-for(i in 1:length(x_poedema)){
-  mydata = Complete_Leg_data
-  mydata$poedema=x_poedema[i]
-  ys = 100*predict(mod_Adj, newdata = mydata, type='response')
-  BSmed = boot(data = ys, statistic = fmed, R = 300)
-  BS25 = boot(data = ys, statistic = f25, R = 300)
-  BS75 = boot(data = ys, statistic = f75, R = 300)
-  
-  PO_CFs[,i] = c(quantile(BS25$t, probs = myquantiles),
-                 quantile(BSmed$t, probs = myquantiles),
-                 quantile(BS75$t, probs = myquantiles))
-}
-#*********Convulsions
-Conv_CFs = array(dim = c(9, length(x_conv)))
-for(i in 1:length(x_conv)){
-  mydata = Complete_Leg_data
-  mydata$convulsions=x_conv[i]
-  ys = 100*predict(mod_Adj, newdata = mydata,  type='response')
-  BSmed = boot(data = ys, statistic = fmed, R = 300)
-  BS25 = boot(data = ys, statistic = f25, R = 300)
-  BS75 = boot(data = ys, statistic = f75, R = 300)
-  
-  Conv_CFs[,i] = c(quantile(BS25$t, probs = myquantiles),
-                   quantile(BSmed$t, probs = myquantiles),
-                   quantile(BS75$t, probs = myquantiles))
-}
+# The scalar multiples to put the AORs on the correct scales
+Scalar_f = c(1, 10, 1, 1, 1, 10, 1, log2(3), 1, 1, 1)
+# Compute 95% CIs
+Results = data.frame(lowerCI = exp(Scalar_f*(FixedEffs$estimate -
+                                               1.96*FixedEffs$std.error)),
+                     mean = exp(Scalar_f*(FixedEffs$estimate)),
+                     upperCI = exp(Scalar_f*(FixedEffs$estimate +
+                                               1.96*FixedEffs$std.error)))
+rownames(Results) = FixedEffs$term
 ```
 
-The way to interpret this `counterfactual' plot is as follows: suppose that every individual in the dataset was assigned (as in a intervention) a specific haematocrit $X$, what would the resulting per patient probability of death be. Here we summarise these probabilities by the predicted mean probability of death and 80\% predictive intervals.
+Make the 'forest' plot:
+```{r ForestPlot_SM}
+plotting_ind = rownames(Results) %in% c('BD','coma1','convulsions1','drug_AS','HCT','log2(BUN)','poedema1')
+Results = Results[plotting_ind,]
+x_ind = sort.int(Results$mean, index.return = T)$ix
+Results = Results[x_ind,]
+par(bty='n', las=1, mar = c(3,9,2,2))
 
-```{r CounterfactualPlots_GLM, echo=FALSE}
-par(las=1, bty='n', mfrow=c(2,3))
-ylabel = 'Probability death'
-#************************** HCT
-plot(x_hcts,HCT_CFs[5,], xlim=c(4,45), ylab=ylabel, 
-     xlab='Haematocrit (%)', ylim=c(0,22), lty=1, lwd=2, type='l')
-polygon(c(x_hcts, rev(x_hcts)), c(HCT_CFs[4,], rev(HCT_CFs[6,])),
-        border = NA, col = rgb(1, 0, 0,0.5))
-lines(x_hcts,HCT_CFs[2,], xlim=c(4,45))
-polygon(c(x_hcts, rev(x_hcts)), c(HCT_CFs[1,], rev(HCT_CFs[3,])),
-        border = NA, col = rgb(1, 0, 0,0.5))
-lines(x_hcts,HCT_CFs[8,], xlim=c(4,45))
-polygon(c(x_hcts, rev(x_hcts)), c(HCT_CFs[7,], rev(HCT_CFs[9,])),
-        border = NA, col = rgb(1, 0, 0,0.5))
-lines(x_hcts, rep(overall_median_mortality[2], length(x_hcts)), lwd=1, col='blue',lty=1)
-polygon(c(x_hcts, rev(x_hcts)), 
-        c(rep(overall_median_mortality[1],length(x_hcts)),
-          rep(overall_median_mortality[3], length(x_hcts))),
-        border = NA, col = rgb(0, 0, 1,0.5))
+Y_Labels = c('+10 mEq/L\nbase deficit',
+             'Coma\non admission',
+             'Seizures\non admission',
+             'Artemisinin drug\nversus\nnon Artemisinin drug',
+             '-10 % points\nabsolute haematocrit\non admission',
+             '3 fold increase\nin blood urea\nnitrogen (mmol/L)',
+             'Pulmonary\nOedema\non admission')
+Y_Labels = Y_Labels[x_ind]
 
-#************************** BD
-plot(x_bd,BD_CFs[5,], ylab=ylabel, 
-     xlab='Base deficit (mEq/L)', ylim=c(0,80), lty=1, lwd=1, type='l')
-lines(x_bd, BD_CFs[2,], lty=1, lwd=1)
-lines(x_bd, BD_CFs[8,], lty=1, lwd=1)
-polygon(c(x_bd, rev(x_bd)), c(BD_CFs[4,], rev(BD_CFs[6,])),
-        border = NA, col = rgb(1, 0, 0,0.5))
-polygon(c(x_bd, rev(x_bd)), c(BD_CFs[1,], rev(BD_CFs[3,])),
-        border = NA, col = rgb(1, 0, 0,0.5))
-polygon(c(x_bd, rev(x_bd)), c(BD_CFs[7,], rev(BD_CFs[9,])),
-        border = NA, col = rgb(1, 0, 0,0.5))
-# Overall effect
-lines(x_bd, rep(overall_median_mortality[2], length(x_bd)), lwd=1, col='blue',lty=1)
-polygon(c(x_bd, rev(x_bd)), 
-        c(rep(overall_median_mortality[1],length(x_bd)),
-          rep(overall_median_mortality[3], length(x_bd))),
-        border = NA, col = rgb(0, 0, 1,0.5))
+xlims = c(0.5, 4.5)
+plot(NA,NA, xlim= log2(xlims), ylim = c(0,1),xaxt='n',
+     xlab='', ylab='', yaxt='n')
+axis(1, at = log2(c(0.5,1, 2,4)), labels = c(0.5,1, 2,4))
+abline(v=0, lty=2, lwd=3, col='red')
+yindex =1
+ypos = seq(0,1,length.out = sum(plotting_ind))
 
-#************************** BUN
-plot(log10(x_BUN),BUN_CFs[5,], ylab=ylabel, xaxt='n',
-     xlab='Blood urea nitrogen (mmol/L)', ylim=c(0,45), 
-     lty=1, lwd=1, type='l')
-axis(1, at = log10(c(2,10,100)), labels = c(2,10,100))
-lines(log10(x_BUN), BUN_CFs[2,], lty=1, lwd=1)
-lines(log10(x_BUN), BUN_CFs[8,], lty=1, lwd=1)
-polygon(log10(c(x_BUN, rev(x_BUN))), c(BUN_CFs[4,], rev(BUN_CFs[6,])),
-        border = NA, col = rgb(1, 0, 0,0.5))
-polygon(log10(c(x_BUN, rev(x_BUN))), c(BUN_CFs[1,], rev(BUN_CFs[3,])),
-        border = NA, col = rgb(1, 0, 0,0.5))
-polygon(log10(c(x_BUN, rev(x_BUN))), c(BUN_CFs[7,], rev(BUN_CFs[9,])),
-        border = NA, col = rgb(1, 0, 0,0.5))
-# Overall effect
-lines(log10(x_BUN), rep(overall_median_mortality[2], length(x_BUN)), lwd=1, col='blue',lty=1)
-polygon(log10(c(x_BUN, rev(x_BUN))), 
-        c(rep(overall_median_mortality[1],length(x_BUN)),
-          rep(overall_median_mortality[3], length(x_BUN))),
-        border = NA, col = rgb(0, 0, 1,0.5))
-
-#************************** Coma
-plot(x_comas,coma_CFs[5,], ylab=ylabel, xaxt='n',
-     xlab='', ylim=c(0,30), lty=1, lwd=1, type='l')
-axis(1, at = 0:1, labels = c('No coma','Coma'))
-lines(x_comas, coma_CFs[2,], lty=1, lwd=1)
-lines(x_comas, coma_CFs[8,], lty=1, lwd=1)
-polygon(c(x_comas, rev(x_comas)), c(coma_CFs[4,], rev(coma_CFs[6,])),
-        border = NA, col = rgb(1, 0, 0,0.5))
-polygon(c(x_comas, rev(x_comas)), c(coma_CFs[1,], rev(coma_CFs[3,])),
-        border = NA, col = rgb(1, 0, 0,0.5))
-polygon(c(x_comas, rev(x_comas)), c(coma_CFs[7,], rev(coma_CFs[9,])),
-        border = NA, col = rgb(1, 0, 0,0.5))
-# Overall effect
-lines(x_comas, rep(overall_median_mortality[2], length(x_comas)), lwd=1, col='blue',lty=1)
-polygon(c(x_comas, rev(x_comas)), 
-        c(rep(overall_median_mortality[1],length(x_comas)),
-          rep(overall_median_mortality[3], length(x_comas))),
-        border = NA, col = rgb(0, 0, 1,0.5))
-
-#************************** Convulsions
-plot(x_conv,Conv_CFs[5,], ylab=ylabel, xaxt='n',
-     xlab='', ylim=c(0,40), lty=1, lwd=1, type='l')
-axis(1, at = x_conv, labels = c('No convulsions','Convulsions'))
-lines(x_conv, Conv_CFs[2,], lty=1, lwd=1)
-lines(x_conv, Conv_CFs[8,], lty=1, lwd=1)
-polygon(c(x_conv, rev(x_conv)), c(Conv_CFs[4,], rev(Conv_CFs[6,])),
-        border = NA, col = rgb(1, 0, 0,0.5))
-polygon(c(x_conv, rev(x_conv)), c(Conv_CFs[1,], rev(Conv_CFs[3,])),
-        border = NA, col = rgb(1, 0, 0,0.5))
-polygon(c(x_conv, rev(x_conv)), c(Conv_CFs[7,], rev(Conv_CFs[9,])),
-        border = NA, col = rgb(1, 0, 0,0.5))
-# Overall effect
-lines(x_conv, rep(overall_median_mortality[2], length(x_conv)), lwd=1, col='blue',lty=1)
-polygon(c(x_conv, rev(x_conv)), 
-        c(rep(overall_median_mortality[1],length(x_conv)),
-          rep(overall_median_mortality[3], length(x_conv))),
-        border = NA, col = rgb(0, 0, 1,0.5))
-
-#************************** Pulmonary Oedema
-plot(x_poedema,PO_CFs[5,], ylab=ylabel, xaxt='n',
-     xlab='', ylim=c(0,40), lty=1, lwd=1, type='l')
-axis(1, at = x_poedema, labels = c('No PO','PO'))
-lines(x_poedema, PO_CFs[2,], lty=1, lwd=1)
-lines(x_poedema, PO_CFs[8,], lty=1, lwd=1)
-polygon(c(x_poedema, rev(x_poedema)), c(PO_CFs[4,], rev(PO_CFs[6,])),
-        border = NA, col = rgb(1, 0, 0,0.5))
-polygon(c(x_poedema, rev(x_poedema)), c(PO_CFs[1,], rev(PO_CFs[3,])),
-        border = NA, col = rgb(1, 0, 0,0.5))
-polygon(c(x_poedema, rev(x_poedema)), c(PO_CFs[7,], rev(PO_CFs[9,])),
-        border = NA, col = rgb(1, 0, 0,0.5))
-# Overall effect
-lines(x_poedema, rep(overall_median_mortality[2], length(x_poedema)), lwd=1, col='blue',lty=1)
-polygon(c(x_poedema, rev(x_poedema)), 
-        c(rep(overall_median_mortality[1],length(x_poedema)),
-          rep(overall_median_mortality[3], length(x_poedema))),
-        border = NA, col = rgb(0, 0, 1,0.5))
+Results['HCT',] = 1/Results['HCT',]
+for(i in 1:nrow(Results)){
+  arrows(log2(Results[i,'lowerCI']),ypos[yindex],
+         log2(Results[i,'upperCI']),ypos[yindex],
+         length=0.05, angle=90, code=3, 
+         col = 'black',lwd=3)
+  points(log2(Results[i,'mean']),ypos[yindex],pch=18,cex=2)
+  yindex=yindex+1
+  
+}
+abline(h=ypos, lty=3)
+axis(side = 2, at = ypos, labels = Y_Labels,tick=FALSE)
+mtext(side=1, line = 2, text = 'Adjusted odds ratio')
+mtext(side = 3, line = 1, text = 'Increased survival',adj = 0)
+mtext(side = 3, line = 1, text = 'Decreased survival',adj = 1)
 ```
 
 
-## More complex GAM model
-
-The GAM model allows for non-linear relationships between certain variables and the outcome.
-
-Here we fit as non-linear the effect of age and haematocrit on mortality.
-We add a random effect term for the studyID and a random effect term for the country.
-This should be adjusting for a confounder of quality of care (which potentially impacts both general anaemia and outcome in study).
-
-```{r deathmodel_GAM}
-
-DAG_fmla = "outcome ~ HCT + LPAR_pct + coma + convulsions + poedema + log10(BUN) + BD + shock + drug_AS + (1 | studyID) + (1 | country)"
-modList= glmerModList(DAG_fmla, data = SM_Impute_List, family=binomial) 
-Effs = modelFixedEff(modList)
-Scalar_f = c(1, 5, 1, 1, 1, 10, 1, 1, 1, 1)
-Results = data.frame(lowerCI = exp(Scalar_f*(Effs$estimate - 1.96*Effs$std.error)),
-                     mean = exp(Scalar_f*(Effs$estimate)),
-                     upperCI = exp(Scalar_f*(Effs$estimate + 1.96*Effs$std.error)))
-rownames(Results) = Effs$term
-Results
-modelRandEffStats(modList)
-
-
-summary(mod_Adj)
-
-mod_Adj_GAM = gam(outcome ~ s(HCT) + LPAR_pct + coma + convulsions +
-                    poedema + s(log10(BUN)) + s(BD) + shock + 
-                    drug_AS + AgeInYear + 
-                    s(studyID, bs='re') + s(country, bs='re'),
-                  data=Complete_Leg_data, family=binomial)
-summary(mod_Adj_GAM)
-```
-
-
-Now we compute the corresponding counterfactual probabilities of death for the dataset for all values of the haematocrit:
-
-```{r }
-#*********HCT
-HCT_CFs = array(dim = c(9, length(x_hcts)))
-for(i in 1:length(x_hcts)){
-  mydata = Complete_Leg_data
-  mydata$HCT=x_hcts[i]
-  preds = predict(mod_Adj_GAM, newdata = mydata,  type='response', se.fit = T)
-  ys = 100*preds$fit
-  BSmed = boot(data = ys, statistic = fmed, R = 300)
-  BS25 = boot(data = ys, statistic = f25, R = 300)
-  BS75 = boot(data = ys, statistic = f75, R = 300)
-  
-  HCT_CFs[,i] = c(quantile(BS25$t, probs = myquantiles),
-                  quantile(BSmed$t, probs = myquantiles),
-                  quantile(BS75$t, probs = myquantiles))
-}
-#*********BD
-BD_CFs = array(dim = c(9, length(x_bd)))
-for(i in 1:length(x_bd)){
-  mydata = Complete_Leg_data
-  mydata$BD=x_bd[i]
-  ys = 100*predict(mod_Adj_GAM, newdata = mydata, type='response')
-  BSmed = boot(data = ys, statistic = fmed, R = 300)
-  BS25 = boot(data = ys, statistic = f25, R = 300)
-  BS75 = boot(data = ys, statistic = f75, R = 300)
-  
-  BD_CFs[,i] = c(quantile(BS25$t, probs = myquantiles),
-                 quantile(BSmed$t, probs = myquantiles),
-                 quantile(BS75$t, probs = myquantiles))
-}
-#*********BUN
-BUN_CFs = array(dim = c(9, length(x_BUN)))
-for(i in 1:length(x_BUN)){
-  mydata = Complete_Leg_data
-  mydata$BUN=x_BUN[i]
-  ys = 100*predict(mod_Adj_GAM, newdata = mydata,  type='response')
-  BSmed = boot(data = ys, statistic = fmed, R = 300)
-  BS25 = boot(data = ys, statistic = f25, R = 300)
-  BS75 = boot(data = ys, statistic = f75, R = 300)
-  
-  BUN_CFs[,i] = c(quantile(BS25$t, probs = myquantiles),
-                  quantile(BSmed$t, probs = myquantiles),
-                  quantile(BS75$t, probs = myquantiles))
-}
-#*********Coma
-coma_CFs = array(dim = c(9, length(x_comas)))
-for(i in 1:length(x_comas)){
-  mydata = Complete_Leg_data
-  mydata$coma=x_comas[i]
-  ys = 100*predict(mod_Adj_GAM, newdata = mydata,  type='response')
-  BSmed = boot(data = ys, statistic = fmed, R = 300)
-  BS25 = boot(data = ys, statistic = f25, R = 300)
-  BS75 = boot(data = ys, statistic = f75, R = 300)
-  
-  coma_CFs[,i] = c(quantile(BS25$t, probs = myquantiles),
-                   quantile(BSmed$t, probs = myquantiles),
-                   quantile(BS75$t, probs = myquantiles))
-}
-#*********poedema
-PO_CFs = array(dim = c(9, length(x_poedema)))
-for(i in 1:length(x_poedema)){
-  mydata = Complete_Leg_data
-  mydata$poedema=x_poedema[i]
-  ys = 100*predict(mod_Adj_GAM, newdata = mydata, type='response')
-  BSmed = boot(data = ys, statistic = fmed, R = 300)
-  BS25 = boot(data = ys, statistic = f25, R = 300)
-  BS75 = boot(data = ys, statistic = f75, R = 300)
-  
-  PO_CFs[,i] = c(quantile(BS25$t, probs = myquantiles),
-                 quantile(BSmed$t, probs = myquantiles),
-                 quantile(BS75$t, probs = myquantiles))
-}
-#*********Convulsions
-Conv_CFs = array(dim = c(9, length(x_conv)))
-for(i in 1:length(x_conv)){
-  mydata = Complete_Leg_data
-  mydata$convulsions=x_conv[i]
-  ys = 100*predict(mod_Adj_GAM, newdata = mydata,  type='response')
-  BSmed = boot(data = ys, statistic = fmed, R = 300)
-  BS25 = boot(data = ys, statistic = f25, R = 300)
-  BS75 = boot(data = ys, statistic = f75, R = 300)
-  
-  Conv_CFs[,i] = c(quantile(BS25$t, probs = myquantiles),
-                   quantile(BSmed$t, probs = myquantiles),
-                   quantile(BS75$t, probs = myquantiles))
-}
-```
-
-We see that the effect of haematocrit on mortality is non-linear under this model: below 20 is protective, above 20 plateaus out:
-
-```{r counterfactualPlots_GAM, echo=FALSE}
-par(las=1, bty='n', mfrow=c(2,3))
-ylabel = 'Probability death'
-#************************** HCT
-plot(x_hcts,HCT_CFs[5,], xlim=c(4,45), ylab=ylabel, 
-     xlab='Haematocrit (%)', ylim=c(0,22), lty=1, lwd=2, type='l')
-polygon(c(x_hcts, rev(x_hcts)), c(HCT_CFs[4,], rev(HCT_CFs[6,])),
-        border = NA, col = rgb(1, 0, 0,0.5))
-lines(x_hcts,HCT_CFs[2,], xlim=c(4,45))
-polygon(c(x_hcts, rev(x_hcts)), c(HCT_CFs[1,], rev(HCT_CFs[3,])),
-        border = NA, col = rgb(1, 0, 0,0.5))
-lines(x_hcts,HCT_CFs[8,], xlim=c(4,45))
-polygon(c(x_hcts, rev(x_hcts)), c(HCT_CFs[7,], rev(HCT_CFs[9,])),
-        border = NA, col = rgb(1, 0, 0,0.5))
-lines(x_hcts, rep(overall_median_mortality[2], length(x_hcts)), lwd=1, col='blue',lty=1)
-polygon(c(x_hcts, rev(x_hcts)), 
-        c(rep(overall_median_mortality[1],length(x_hcts)),
-          rep(overall_median_mortality[3], length(x_hcts))),
-        border = NA, col = rgb(0, 0, 1,0.5))
-
-#************************** BD
-plot(x_bd,BD_CFs[5,], ylab=ylabel, 
-     xlab='Base deficit (mEq/L)', ylim=c(0,80), lty=1, lwd=1, type='l')
-lines(x_bd, BD_CFs[2,], lty=1, lwd=1)
-lines(x_bd, BD_CFs[8,], lty=1, lwd=1)
-polygon(c(x_bd, rev(x_bd)), c(BD_CFs[4,], rev(BD_CFs[6,])),
-        border = NA, col = rgb(1, 0, 0,0.5))
-polygon(c(x_bd, rev(x_bd)), c(BD_CFs[1,], rev(BD_CFs[3,])),
-        border = NA, col = rgb(1, 0, 0,0.5))
-polygon(c(x_bd, rev(x_bd)), c(BD_CFs[7,], rev(BD_CFs[9,])),
-        border = NA, col = rgb(1, 0, 0,0.5))
-# Overall effect
-lines(x_bd, rep(overall_median_mortality[2], length(x_bd)), lwd=1, col='blue',lty=1)
-polygon(c(x_bd, rev(x_bd)), 
-        c(rep(overall_median_mortality[1],length(x_bd)),
-          rep(overall_median_mortality[3], length(x_bd))),
-        border = NA, col = rgb(0, 0, 1,0.5))
-
-#************************** BUN
-plot(log10(x_BUN),BUN_CFs[5,], ylab=ylabel, xaxt='n',
-     xlab='Blood urea nitrogen (mmol/L)', ylim=c(0,45), 
-     lty=1, lwd=1, type='l')
-axis(1, at = log10(c(2,10,100)), labels = c(2,10,100))
-lines(log10(x_BUN), BUN_CFs[2,], lty=1, lwd=1)
-lines(log10(x_BUN), BUN_CFs[8,], lty=1, lwd=1)
-polygon(log10(c(x_BUN, rev(x_BUN))), c(BUN_CFs[4,], rev(BUN_CFs[6,])),
-        border = NA, col = rgb(1, 0, 0,0.5))
-polygon(log10(c(x_BUN, rev(x_BUN))), c(BUN_CFs[1,], rev(BUN_CFs[3,])),
-        border = NA, col = rgb(1, 0, 0,0.5))
-polygon(log10(c(x_BUN, rev(x_BUN))), c(BUN_CFs[7,], rev(BUN_CFs[9,])),
-        border = NA, col = rgb(1, 0, 0,0.5))
-# Overall effect
-lines(log10(x_BUN), 
-      rep(overall_median_mortality[2], length(x_BUN)), 
-      lwd=1, col='blue',lty=1)
-polygon(log10(c(x_BUN, rev(x_BUN))), 
-        c(rep(overall_median_mortality[1],length(x_BUN)),
-          rep(overall_median_mortality[3], length(x_BUN))),
-        border = NA, col = rgb(0, 0, 1,0.5))
-
-#************************** Coma
-plot(x_comas,coma_CFs[5,], ylab=ylabel, xaxt='n',
-     xlab='', ylim=c(0,30), lty=1, lwd=1, type='l')
-axis(1, at = 0:1, labels = c('No coma','Coma'))
-lines(x_comas, coma_CFs[2,], lty=1, lwd=1)
-lines(x_comas, coma_CFs[8,], lty=1, lwd=1)
-polygon(c(x_comas, rev(x_comas)), c(coma_CFs[4,], rev(coma_CFs[6,])),
-        border = NA, col = rgb(1, 0, 0,0.5))
-polygon(c(x_comas, rev(x_comas)), c(coma_CFs[1,], rev(coma_CFs[3,])),
-        border = NA, col = rgb(1, 0, 0,0.5))
-polygon(c(x_comas, rev(x_comas)), c(coma_CFs[7,], rev(coma_CFs[9,])),
-        border = NA, col = rgb(1, 0, 0,0.5))
-# Overall effect
-lines(x_comas, rep(overall_median_mortality[2], length(x_comas)), lwd=1, col='blue',lty=1)
-polygon(c(x_comas, rev(x_comas)), 
-        c(rep(overall_median_mortality[1],length(x_comas)),
-          rep(overall_median_mortality[3], length(x_comas))),
-        border = NA, col = rgb(0, 0, 1,0.5))
-
-#************************** Convulsions
-plot(x_conv,Conv_CFs[5,], ylab=ylabel, xaxt='n',
-     xlab='', ylim=c(0,30), lty=1, lwd=1, type='l')
-axis(1, at = x_conv, labels = c('No convulsions','Convulsions'))
-lines(x_conv, Conv_CFs[2,], lty=1, lwd=1)
-lines(x_conv, Conv_CFs[8,], lty=1, lwd=1)
-polygon(c(x_conv, rev(x_conv)), c(Conv_CFs[4,], rev(Conv_CFs[6,])),
-        border = NA, col = rgb(1, 0, 0,0.5))
-polygon(c(x_conv, rev(x_conv)), c(Conv_CFs[1,], rev(Conv_CFs[3,])),
-        border = NA, col = rgb(1, 0, 0,0.5))
-polygon(c(x_conv, rev(x_conv)), c(Conv_CFs[7,], rev(Conv_CFs[9,])),
-        border = NA, col = rgb(1, 0, 0,0.5))
-# Overall effect
-lines(x_conv, rep(overall_median_mortality[2], length(x_conv)), lwd=1, col='blue',lty=1)
-polygon(c(x_conv, rev(x_conv)), 
-        c(rep(overall_median_mortality[1],length(x_conv)),
-          rep(overall_median_mortality[3], length(x_conv))),
-        border = NA, col = rgb(0, 0, 1,0.5))
-
-#************************** Pulmonary Oedema
-plot(x_poedema,PO_CFs[5,], ylab=ylabel, xaxt='n',
-     xlab='', ylim=c(0,30), lty=1, lwd=1, type='l')
-axis(1, at = x_poedema, labels = c('No PO','PO'))
-lines(x_poedema, PO_CFs[2,], lty=1, lwd=1)
-lines(x_poedema, PO_CFs[8,], lty=1, lwd=1)
-polygon(c(x_poedema, rev(x_poedema)), c(PO_CFs[4,], rev(PO_CFs[6,])),
-        border = NA, col = rgb(1, 0, 0,0.5))
-polygon(c(x_poedema, rev(x_poedema)), c(PO_CFs[1,], rev(PO_CFs[3,])),
-        border = NA, col = rgb(1, 0, 0,0.5))
-polygon(c(x_poedema, rev(x_poedema)), c(PO_CFs[7,], rev(PO_CFs[9,])),
-        border = NA, col = rgb(1, 0, 0,0.5))
-# Overall effect
-lines(x_poedema, rep(overall_median_mortality[2], length(x_poedema)), lwd=1, col='blue',lty=1)
-polygon(c(x_poedema, rev(x_poedema)), 
-        c(rep(overall_median_mortality[1],length(x_poedema)),
-          rep(overall_median_mortality[3], length(x_poedema))),
-        border = NA, col = rgb(0, 0, 1,0.5))
-```
-
-
-## Model comparison
-
-Which model is better fit in terms of AIC
-
-```{r}
-print(AIC(mod_Adj_GAM, mod_Adj))
-```
-
-And in terms of deviance
-
-```{r}
-print(list(mod_Adj_GAM=deviance(mod_Adj_GAM),
-           mod_Adj = deviance(mod_Adj)))
-```
 

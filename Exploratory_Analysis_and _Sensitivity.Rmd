@@ -34,7 +34,7 @@ library(mgcv) # For the GAM modelling
 This looks at the severe malaria legacy dataset from MORU.
 
 ```{r, echo=FALSE}
-load('RData/Data.R')
+load('RData/Data.RData')
 ind_missing = apply(m[,c('AgeInYear','HCT','BUN','BD','LPAR_pct')], 1, function(x) sum(is.na(x))>0)
 Leg_data_complete = m[!ind_missing,]
 Leg_data_complete = Leg_data_complete[!is.infinite(Leg_data_complete$LPAR_pct),]
@@ -82,7 +82,7 @@ mod_BUN_BD = gam(formula = BD ~ s(log10(BUN)) + s(studyID, bs='re') +
 
 ```
 
-```{r ExploratoryPlots}
+```{r ExploratoryPlots, echo=FALSE}
 mycols = brewer.pal(length(unique(m$studyID)), 'Set1')
 Leg_data_complete$color = as.character(revalue(Leg_data_complete$studyID, 
                                                replace = c('Core Malaria'=mycols[1],
@@ -335,38 +335,14 @@ m$BUN[missing_BUN & Available_cr] = predict(mod_impute4,newdata=m[missing_BUN & 
 Resulting data we can now use:
 The contributions of the different studies:
 ```{r}
-vars_interest = c('outcome','HCT','LPAR_pct','BD','BUN','poedema',
-                  'convulsions','coma','AgeInYear','drug_class')
+vars_interest = c('outcome','HCT','LPAR_pct','coma','convulsions','poedema',
+                  'BUN','BD','shock','hypoglycaemia',
+                  'studyID','country')
 complete_cases = apply(m[,vars_interest], 1, function(x) sum(is.na(x))) == 0
 Complete_Leg_data = m[complete_cases,] # for the model fitting
 Complete_Leg_data$studyID = as.factor(as.character(Complete_Leg_data$studyID))
-# Whole dataset
-table(m$studyID)
-# in the complete dataset (all variables recorded)
-table(Complete_Leg_data$studyID)
-Complete_Leg_data$drug_AS = 0
-Complete_Leg_data$drug_AS[Complete_Leg_data$drug_class=='artemisinin']=1
-
-# remove infinite log parasitaemias
-ind_keep = !(is.infinite(Complete_Leg_data$LPAR_pct) | is.nan(Complete_Leg_data$LPAR_pct))
-Complete_Leg_data = Complete_Leg_data[ind_keep,]
 ```
 
-Data summaries
-```{r}
-Africa = c('The Gambia','Mozambique','Ghana','Kenya','Nigeria','Tanzania','Uganda','Rwanda','Congo')
-Asia = c('Thailand','Vietnam','Bangladesh','Myanmar','India','Indonesia')
-writeLines(paste('Children in Africa:',
-                 sum(m$AgeInYear < 15 & m$country %in% Africa)))
-writeLines(paste('Adults in Africa:',
-                 sum(m$AgeInYear >= 15 & m$country %in% Africa)))
-
-writeLines(paste('Children in Asia:',
-                 sum(m$AgeInYear < 15 & m$country %in% Asia)))
-writeLines(paste('Adults in Asia:',
-                 sum(m$AgeInYear >= 15 & m$country %in% Asia)))
-
-```
 
 
 ```{r}
