@@ -65,16 +65,11 @@ apply(m,2, function(x) sum(is.na(x)))
 We make a few data adjustments for the model imputation and fitting:
 ```{r}
 m$LPAR_pct[is.infinite(m$LPAR_pct)] = 0
-# m$drug_class = as.factor(m$drug_class)
-# m$poedema = as.factor(m$poedema)
-# m$coma = as.factor(m$coma)
-# m$convulsions = as.factor(m$convulsions)
-# m$transfusion = as.factor(m$transfusion)
 ```
 
-We run the multiple imputation using sequential linear models:
+We run the multiple imputation using sequential linear models.
 
-Setup the models.
+First we setup these linear models. Random effect terms are added for study and country.
 
 ```{r, include=FALSE}
 # Base deficit from bicarbonate
@@ -140,10 +135,8 @@ ind10 = !ind4 & is.na(m$BUN)
 
 
 ```{r}
-K_imputations = 200
-
+K_imputations = 500
 SM_Impute_List = list()
-
 for (k in 1:K_imputations){
   Imp_data = m
   
@@ -223,7 +216,7 @@ for (k in 1:K_imputations){
   
 }
 save(SM_Impute_List, file = 'RData/Multiple_Imputed_Datasets.RData')
-
+# Check the number of remaining missing in the last imputed dataset:
 vars_explanatory = c('HCT','LPAR_pct','coma' ,'convulsions',
                      'poedema','BUN','BD' ,'shock','hypoglycaemia',
                      'drug_AS','studyID','country')
