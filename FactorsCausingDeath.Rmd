@@ -13,8 +13,7 @@ knitr::opts_chunk$set(cache = TRUE, cache.comments = FALSE,
                       fig.pos = 'H', 
                       dev = 'png', dpi = 300)
 
-RUN_M_IMPUTATION = F
-RUN_MODELS = F
+RUN_MODELS = T
 ```
 
 # Background
@@ -25,6 +24,8 @@ This looks at the severe malaria legacy dataset from MORU
 load('RData/Data.RData')
 m$drug_AS = 0
 m$drug_AS[m$drug_class=='artemisinin']=1
+
+m$coma[is.na(m$coma) & m$studyID=='AQ'] = 0
 ```
 
 
@@ -54,7 +55,7 @@ writeLines(paste('Adults in Asia:',
 
 ```
 
-### Multiple imputation using missForest
+### Multiple imputation using linear relationships
 
 The number of missing variables in the pooled data:
 ```{r}
@@ -64,48 +65,181 @@ apply(m,2, function(x) sum(is.na(x)))
 We make a few data adjustments for the model imputation and fitting:
 ```{r}
 m$LPAR_pct[is.infinite(m$LPAR_pct)] = 0
-m$drug_class = as.factor(m$drug_class)
-m$poedema = as.factor(m$poedema)
-m$coma = as.factor(m$coma)
-m$convulsions = as.factor(m$convulsions)
-m$transfusion = as.factor(m$transfusion)
+# m$drug_class = as.factor(m$drug_class)
+# m$poedema = as.factor(m$poedema)
+# m$coma = as.factor(m$coma)
+# m$convulsions = as.factor(m$convulsions)
+# m$transfusion = as.factor(m$transfusion)
 ```
 
-We run the multiple imputation using missForest
+We run the multiple imputation using sequential linear models:
+
+Setup the models.
+
 ```{r, include=FALSE}
-# This takes a long time to run....
-if(RUN_M_IMPUTATION){
-  registerDoParallel(cores = 6)
-  impute_vars = c('shock','coma','LPAR_pct','BD','BUN','poedema','HCT',
-                  'convulsions',"AgeInYear","paraul","parc","LPAR","transfusion",
-                  'rr', 'lactate', 'bicarbonate', 'creatinine',"hypoglycaemia")
-  SM_Impute_List = list()
-  K = 150
-  for(i in 1:K){
-    Imputed_SM_vars = missForest(xmis = m[,impute_vars], decreasing = T,
-                                 maxiter = 10, 
-                                 variablewise = T,parallelize = 'forests')
-    SM_data = Imputed_SM_vars$ximp
-    SM_data = cbind(SM_data, m[,c('outcome','studyID','country','drug_AS')])
-    SM_Impute_List[[i]] = SM_data
-  }
+# Base deficit from bicarbonate
+BD_and_bicarbonate = !is.na(m$BD) & !is.na(m$bicarbonate)
+mod_impute1 = lmer(BD ~ bicarbonate + (1 | studyID) + (1 | country), 
+                   data= m[BD_and_bicarbonate,])
+# Base deficit and lactate
+BD_and_lactate = !is.na(m$BD) & !is.na(m$lactate)
+mod_impute2 = lmer(BD ~ lactate + (1 | country), 
+                   data= m[BD_and_lactate,])
+# Base deficit and rr
+BD_and_rr = !is.na(m$BD) & !is.na(m$rr)
+mod_impute3 = lmer(BD ~ rr + (1 | studyID) + (1 | country), 
+                   data= m[BD_and_rr,])
+
+ind1 = is.na(m$BD) & !is.na(m$bicarbonate)
+ind2 = !ind1 & is.na(m$BD) & !is.na(m$lactate)
+ind3 = !ind1 & !ind2 & is.na(m$BD) & !is.na(m$rr)
+
+# BUN and creatinine
+BUN_and_cr = !is.na(m$BUN) & !is.na(m$creatinine)
+mod_impute4 = lmer(log(BUN) ~ creatinine + (1 | studyID) + (1 | country), 
+                   data= m[BUN_and_cr,])
+ind4 = is.na(m$BUN) & !is.na(m$creatinine)
+
+# Age from HCT
+HCT_and_Age = !is.na(m$AgeInYear) & !is.na(m$HCT)
+mod_impute5 = lmer(HCT ~ AgeInYear + (1 | studyID) + (1 | country),
+                   data = m[HCT_and_Age,])
+ind5 = is.na(m$HCT) & !is.na(m$AgeInYear)
+
+# marginal distribution of BD to impute remaining
+BD_alone = !is.na(m$BD)
+mod_impute6 = lmer(BD ~ AgeInYear + (1 | studyID) + (1 | country),
+                   data = m[BD_alone,])
+ind6 = !ind1 & !ind2 & !ind3 & is.na(m$BD)
+
+# marginal distribution of coma 
+Coma_alone = !is.na(m$coma)
+mod_impute7 = glmer(coma ~ AgeInYear + hypoglycaemia + (1 | studyID) + (1 | country),
+                    family = 'binomial',
+                    data = m[Coma_alone,])
+ind7 = is.na(m$coma)
+
+# marginal distribution of LPAR_pct 
+LPAR_pct_alone = !is.na(m$LPAR_pct)
+mod_impute8 = lmer(LPAR_pct ~ AgeInYear + (1 | studyID) + (1 | country),
+                   data = m[LPAR_pct_alone,])
+ind8 = is.na(m$LPAR_pct)
+
+# marginal distribution of LPAR_pct 
+Hypoglycaemia_alone = !is.na(m$hypoglycaemia)
+mod_impute9 = glmer(hypoglycaemia ~ 1 + (1 | studyID) + (1 | country),
+                    data = m[Hypoglycaemia_alone,], family='binomial')
+ind9 = is.na(m$hypoglycaemia)
+
+# marginal distribution of BUN 
+BUN_alone = !is.na(m$BUN)
+mod_impute10 = lmer(log(BUN) ~ 1 + (1 | studyID) + (1 | country),
+                    data = m[BUN_alone,])
+ind10 = !ind4 & is.na(m$BUN)
+```
+
+
+```{r}
+K_imputations = 200
+
+SM_Impute_List = list()
+
+for (k in 1:K_imputations){
+  Imp_data = m
   
-  save(SM_Impute_List, file = 'RData/Multiple_Imputed_Datasets.RData')
-} else {
-  load(file = 'RData/Multiple_Imputed_Datasets.RData')
+  # BD from bicarbonate
+  coefs1 = summary(mod_impute1)$coefficients
+  Imp_data$BD[ind1] = rnorm(n = sum(ind1), 
+                            mean = predict(mod_impute1, newdata = m[ind1,]),
+                            sd = coefs1[1,'Std. Error'] + 
+                              coefs1[2,'Std. Error']*m$bicarbonate[ind1])
+  
+  # BD from lactate
+  coefs2 = summary(mod_impute2)$coefficients
+  Imp_data$BD[ind2] = rnorm(n = sum(ind2), 
+                            mean = predict(mod_impute2, newdata = m[ind2,],allow.new.levels=T),
+                            sd = coefs2[1,'Std. Error'] + 
+                              coefs2[2,'Std. Error']*m$lactate[ind2])
+  
+  # BD from respiratory rate
+  coefs3 = summary(mod_impute3)$coefficients
+  Imp_data$BD[ind3] = rnorm(n = sum(ind3), 
+                            mean = predict(mod_impute3, newdata = m[ind3,],allow.new.levels=T),
+                            sd = coefs3[1,'Std. Error'] + 
+                              coefs3[2,'Std. Error']*m$rr[ind3])
+  
+  # BUN from creatinine
+  coefs4 = summary(mod_impute4)$coefficients
+  Imp_data$BUN[ind4] = exp(rnorm(n = sum(ind4), 
+                                 mean = predict(mod_impute4, newdata = m[ind4,],allow.new.levels=T),
+                                 sd = coefs4[1,'Std. Error'] + 
+                                   coefs4[2,'Std. Error']*m$creatinine[ind4]))
+  
+  # HCT from Age
+  coefs5 = summary(mod_impute5)$coefficients
+  Imp_data$HCT[ind5] = rnorm(n = sum(ind5), 
+                             mean = predict(mod_impute5, newdata = m[ind5,],allow.new.levels=T),
+                             sd = coefs5[1,'Std. Error'] + 
+                               coefs5[2,'Std. Error']*m$AgeInYear[ind5])
+  
+  # BD from age
+  coefs6 = summary(mod_impute6)$coefficients
+  Imp_data$BD[ind6] = rnorm(n = sum(ind6), 
+                            mean = predict(mod_impute6, newdata = m[ind6,],allow.new.levels=T),
+                            sd = coefs6[1,'Std. Error'] + 
+                              coefs6[2,'Std. Error']*m$AgeInYear[ind6])
+  
+  # Coma from hypoglycaemia
+  coefs7 = summary(mod_impute7)$coefficients
+  Imp_data$coma[ind7] = rbinom(n = sum(ind7), size = 1,
+                               predict(mod_impute7, newdata = m[ind7,],
+                                       allow.new.levels=T, type='response'))
+  
+  # Parasitaemia from age
+  coefs8 = summary(mod_impute8)$coefficients
+  Imp_data$LPAR_pct[ind8] = rnorm(n = sum(ind8), 
+                                  mean = predict(mod_impute8, 
+                                                 newdata = m[ind8,],
+                                                 allow.new.levels=T),
+                                  sd = coefs8[1,'Std. Error'] + 
+                                    coefs8[2,'Std. Error']*m$AgeInYear[ind8])
+  
+  # Hypoglycaemia: marginal
+  coefs9 = summary(mod_impute9)$coefficients
+  Imp_data$hypoglycaemia[ind9] = rbinom(n = sum(ind9),size = 1, 
+                                        prob = predict(mod_impute9, 
+                                                       newdata = m[ind9,],
+                                                       allow.new.levels=T,
+                                                       type='response'))
+  
+  # BUN: marginal
+  coefs10 = summary(mod_impute10)$coefficients
+  Imp_data$BUN[ind10] = exp(rnorm(n = sum(ind10), 
+                                  mean = predict(mod_impute10, newdata = m[ind10,],
+                                                 allow.new.levels=T),
+                                  sd = coefs10[1,'Std. Error']))
+  
+  SM_Impute_List[[k]] = Imp_data
+  
 }
+save(SM_Impute_List, file = 'RData/Multiple_Imputed_Datasets.RData')
+
+vars_explanatory = c('HCT','LPAR_pct','coma' ,'convulsions',
+                     'poedema','BUN','BD' ,'shock','hypoglycaemia',
+                     'drug_AS','studyID','country')
+apply(Imp_data[,vars_explanatory], 2, function(x) sum(is.na(x)))
 ```
 
 
 # Logistic regression model
 
 We fit the full model with adjustments as specified in the Methods section:
-```{r deathmodel_glm}
+```{r deathmodel_glm, include=FALSE, echo=TRUE}
 if(RUN_MODELS){
   # the model formula
   DAG_fmla = "outcome ~ HCT + LPAR_pct + coma + convulsions + poedema + 
-              log2(BUN) + BD + shock + hypoglycaemia + 
-              drug_AS + (1 | studyID) + (1 | country)"
+                        log2(BUN) + BD + shock + hypoglycaemia + 
+                        drug_AS + (1 | studyID) + (1 | country)"
   # fit the model to each dataset
   modList= glmerModList(DAG_fmla, data = SM_Impute_List, family=binomial,parallel = T) 
   # save the output
@@ -140,7 +274,7 @@ rownames(Results) = FixedEffs$term
 
 Make the 'forest' plot:
 ```{r ForestPlot_SM}
-plotting_ind = rownames(Results) %in% c('BD','coma1','convulsions1','drug_AS','HCT','log2(BUN)','poedema1')
+plotting_ind = rownames(Results) %in% c('BD','coma','convulsions1','drug_AS','HCT','log2(BUN)','poedema1')
 Results = Results[plotting_ind,]
 x_ind = sort.int(Results$mean, index.return = T)$ix
 Results = Results[x_ind,]
