@@ -194,7 +194,7 @@ x_comas = 0:1
 x_conv = 0:1
 x_poedema = 0:1
 x_bd = seq(-22,35, by=2)
-x_BUN = seq(2,150, length.out = 2)
+x_BUN = 2:150
 
 #************** BD
 predsBD = predict(modBD, newdata = data.frame(BD= x_bd, 
@@ -203,7 +203,7 @@ predsBD = predict(modBD, newdata = data.frame(BD= x_bd,
                   exclude = c("s(country)","s(studyID)"), 
                   se.fit=T)
 plot(x_bd, 100*inv.logit(predsBD$fit), ylab='%', xlab='Base deficit (mEq/L)', 
-     type='l', lwd=3,ylim = c(0,100))
+     type='l', lwd=3,ylim = c(0,80))
 polygon(c(x_bd, rev(x_bd)), 100*inv.logit(c(predsBD$fit + 1.96*predsBD$se.fit,
                                             rev(predsBD$fit - 1.96*predsBD$se.fit))),
         lty=2,lwd=2, border = NA, col = rgb(0, 0, 1,0.5))
@@ -216,7 +216,7 @@ predsHCT = predict(modHCT,
                    exclude = c("s(country)","s(studyID)"), 
                    se.fit=T)
 plot(x_hcts, 100*inv.logit(predsHCT$fit), ylab='%', xlab='Haematocrit (%)', 
-     type='l', lwd=3,ylim = c(10,45))
+     type='l', lwd=3,ylim = c(0,25))
 polygon(c(x_hcts,rev(x_hcts)), 
         100*inv.logit(c(predsHCT$fit + 1.96*predsHCT$se.fit, 
                         rev(predsHCT$fit - 1.96*predsHCT$se.fit))),
@@ -244,12 +244,15 @@ predscoma = predict(modcoma, newdata = data.frame(coma=x_comas,
                     exclude = c("s(country)","s(studyID)"), 
                     se.fit=T)
 plot(x_comas, 100*inv.logit(predscoma$fit), ylab='%', xlab='', 
-     type='l', lwd=3, ylim = c(0,26), xaxt='n')
-axis(1, at=x_comas, labels = c('No Coma','Coma'))
-polygon(c(x_comas,rev(x_comas)), 
-        100*inv.logit(c(predscoma$fit + 1.96*predscoma$se.fit,
-                        rev(predscoma$fit -1.96*predscoma$se.fit))),
-        lty=2,lwd=2, border = NA, col = rgb(0, 0, 1,0.5))
+     type='p', lwd=3, ylim = c(0,28), xaxt='n', pch=19, xlim = c(-.25,1.25))
+axis(1, at=x_comas, labels = c('No Coma','Coma'), tick = F)
+ys = 100*inv.logit(c(predscoma$fit - 1.96*predscoma$se.fit,
+                     predscoma$fit + 1.96*predscoma$se.fit))
+arrows(x0 = x_comas[1],y0 = ys[1], x1 = x_comas[1], y1 = ys[3],
+       angle = 90,lwd=6,code = 3,length=.2,col = rgb(0, 0, 1,0.5))
+arrows(x0 = x_comas[2],y0 = ys[2], x1 = x_comas[2], y1 = ys[4],
+       angle = 90,lwd=6,code = 3,length=.2,col = rgb(0, 0, 1,0.5))
+
 
 #************** Convulsions
 predsconv = predict(modconv, newdata = data.frame(convulsions=x_conv, 
@@ -258,12 +261,15 @@ predsconv = predict(modconv, newdata = data.frame(convulsions=x_conv,
                     exclude = c("s(country)","s(studyID)"), 
                     se.fit=T)
 plot(x_conv, 100*inv.logit(predsconv$fit), ylab='%', xlab='', 
-     type='l', lwd=3, ylim = c(0,30), xaxt='n')
-axis(1, at=x_conv, labels = c('No convulsions','Convulsions'))
-polygon(c(x_conv,rev(x_conv)), 
-        100*inv.logit(c(predsconv$fit + 1.96*predsconv$se.fit,
-                        rev(predsconv$fit -1.96*predsconv$se.fit))),
-        lty=2,lwd=2, border = NA, col = rgb(0, 0, 1,0.5))
+     type='p', lwd=3, ylim = c(0,30), xaxt='n',pch=19, xlim = c(-.25,1.25))
+axis(1, at=x_conv, labels = c('No convulsions','Convulsions'),tick = F)
+
+ys = 100*inv.logit(c(predsconv$fit + 1.96*predsconv$se.fit,
+                     predsconv$fit -1.96*predsconv$se.fit))
+arrows(x0 = x_conv[1],y0 = ys[1], x1 = x_conv[1], y1 = ys[3],angle = 90,
+       lwd=6,code = 3,length=.2,col = rgb(0, 0, 1,0.5))
+arrows(x0 = x_conv[2],y0 = ys[2], x1 = x_conv[2], y1 = ys[4],angle = 90,
+       lwd=6,code = 3,length=.2,col = rgb(0, 0, 1,0.5))
 
 #************** Pulmonary Oedema
 predspoedema = predict(modpoedema, 
@@ -273,12 +279,15 @@ predspoedema = predict(modpoedema,
                        exclude = c("s(country)","s(studyID)"), 
                        se.fit=T)
 plot(x_poedema, 100*inv.logit(predspoedema$fit), ylab='%', xlab='', 
-     type='l', lwd=3, ylim = c(0,55), xaxt='n')
-axis(1, at=x_poedema, labels = c('No PO','PO'))
-polygon(c(x_poedema,rev(x_poedema)), 
-        100*inv.logit(c(predspoedema$fit + 1.96*predspoedema$se.fit,
-                        rev(predspoedema$fit - 1.96*predspoedema$se.fit))),
-        lty=2,lwd=2, border = NA, col = rgb(0, 0, 1,0.5))
+     type='p', lwd=3, ylim = c(0,55), xaxt='n',pch=19, xlim = c(-.25,1.25))
+axis(1, at=x_poedema, labels = c('No Pulmonary\nOedema','Pulmonary\nOedema'),tick = F)
+ys = 100*inv.logit(c(predspoedema$fit + 1.96*predspoedema$se.fit,
+                     (predspoedema$fit - 1.96*predspoedema$se.fit)))
+arrows(x0 = x_poedema[1],y0 = ys[1], x1 = x_poedema[1], y1 = ys[3],angle = 90,
+       lwd=6,code = 3,length=.2,col = rgb(0, 0, 1,0.5))
+arrows(x0 = x_poedema[2],y0 = ys[2], x1 = x_poedema[2], y1 = ys[4],angle = 90,
+       lwd=6,code = 3,length=.2,col = rgb(0, 0, 1,0.5))
+
 ```
 
 # Sensitivity Analysis
