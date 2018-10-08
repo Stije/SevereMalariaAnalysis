@@ -193,7 +193,7 @@ x_hcts = seq(10,45, by=1)
 x_comas = 0:1
 x_conv = 0:1
 x_poedema = 0:1
-x_bd = seq(-22,35, by=2)
+x_bd = seq(-5,35, by=2)
 x_BUN = 2:150
 
 #************** BD
@@ -202,7 +202,7 @@ predsBD = predict(modBD, newdata = data.frame(BD= x_bd,
                                               country='Thailand'), 
                   exclude = c("s(country)","s(studyID)"), 
                   se.fit=T)
-plot(x_bd, 100*inv.logit(predsBD$fit), ylab='%', xlab='Base deficit (mEq/L)', 
+plot(x_bd, 100*inv.logit(predsBD$fit), ylab='mortality (%)', xlab='Base deficit (mEq/L)', 
      type='l', lwd=3,ylim = c(0,80))
 polygon(c(x_bd, rev(x_bd)), 100*inv.logit(c(predsBD$fit + 1.96*predsBD$se.fit,
                                             rev(predsBD$fit - 1.96*predsBD$se.fit))),
@@ -215,7 +215,7 @@ predsHCT = predict(modHCT,
                                         country='Thailand'), 
                    exclude = c("s(country)","s(studyID)"), 
                    se.fit=T)
-plot(x_hcts, 100*inv.logit(predsHCT$fit), ylab='%', xlab='Haematocrit (%)', 
+plot(x_hcts, 100*inv.logit(predsHCT$fit), ylab='mortality (%)', xlab='Haematocrit (%)', 
      type='l', lwd=3,ylim = c(0,25))
 polygon(c(x_hcts,rev(x_hcts)), 
         100*inv.logit(c(predsHCT$fit + 1.96*predsHCT$se.fit, 
@@ -228,7 +228,7 @@ predsBUN = predict(modBUN, newdata = data.frame(BUN=x_BUN,
                                                 country='Thailand'), 
                    exclude = c("s(country)","s(studyID)"), 
                    se.fit=T)
-plot(log10(x_BUN), 100*inv.logit(predsBUN$fit), ylab='%', 
+plot(log10(x_BUN), 100*inv.logit(predsBUN$fit), ylab='mortality (%)', 
      xlab='Blood urea nitrogen (mmol/L)', 
      type='l', lwd=3,ylim = c(0,60), xaxt='n')
 axis(1, at = log10(c(2,10,100)), labels = c(2,10,100))
@@ -243,7 +243,7 @@ predscoma = predict(modcoma, newdata = data.frame(coma=x_comas,
                                                   country='Thailand'), 
                     exclude = c("s(country)","s(studyID)"), 
                     se.fit=T)
-plot(x_comas, 100*inv.logit(predscoma$fit), ylab='%', xlab='', 
+plot(x_comas, 100*inv.logit(predscoma$fit), ylab='mortality (%)', xlab='', 
      type='p', lwd=3, ylim = c(0,28), xaxt='n', pch=19, xlim = c(-.25,1.25))
 axis(1, at=x_comas, labels = c('No Coma','Coma'), tick = F)
 ys = 100*inv.logit(c(predscoma$fit - 1.96*predscoma$se.fit,
@@ -260,9 +260,9 @@ predsconv = predict(modconv, newdata = data.frame(convulsions=x_conv,
                                                   country='Thailand'), 
                     exclude = c("s(country)","s(studyID)"), 
                     se.fit=T)
-plot(x_conv, 100*inv.logit(predsconv$fit), ylab='%', xlab='', 
+plot(x_conv, 100*inv.logit(predsconv$fit), ylab='mortality (%)', xlab='', 
      type='p', lwd=3, ylim = c(0,30), xaxt='n',pch=19, xlim = c(-.25,1.25))
-axis(1, at=x_conv, labels = c('No convulsions','Convulsions'),tick = F)
+axis(1, at=x_conv, labels = c('No seizures','Seizures'),tick = F)
 
 ys = 100*inv.logit(c(predsconv$fit + 1.96*predsconv$se.fit,
                      predsconv$fit -1.96*predsconv$se.fit))
@@ -278,7 +278,7 @@ predspoedema = predict(modpoedema,
                                             country='Thailand'), 
                        exclude = c("s(country)","s(studyID)"), 
                        se.fit=T)
-plot(x_poedema, 100*inv.logit(predspoedema$fit), ylab='%', xlab='', 
+plot(x_poedema, 100*inv.logit(predspoedema$fit), ylab='mortality (%)', xlab='', 
      type='p', lwd=3, ylim = c(0,55), xaxt='n',pch=19, xlim = c(-.25,1.25))
 axis(1, at=x_poedema, labels = c('No Pulmonary\nOedema','Pulmonary\nOedema'),tick = F)
 ys = 100*inv.logit(c(predspoedema$fit + 1.96*predspoedema$se.fit,
