@@ -13,7 +13,7 @@ knitr::opts_chunk$set(cache = TRUE, cache.comments = FALSE,
                       fig.pos = 'H', 
                       dev = 'png', dpi = 300)
 
-RUN_MODELS = T
+RUN_MODELS = F
 ```
 
 # Background
@@ -135,6 +135,7 @@ ind10 = !ind4 & is.na(m$BUN)
 
 
 ```{r}
+if(RUN_MODELS){
 K_imputations = 500
 SM_Impute_List = list()
 for (k in 1:K_imputations){
@@ -221,6 +222,9 @@ vars_explanatory = c('HCT','LPAR_pct','coma' ,'convulsions',
                      'poedema','BUN','BD' ,'shock','hypoglycaemia',
                      'drug_AS','studyID','country')
 apply(Imp_data[,vars_explanatory], 2, function(x) sum(is.na(x)))
+} else {
+  load('RData/Multiple_Imputed_Datasets.RData')
+}
 ```
 
 

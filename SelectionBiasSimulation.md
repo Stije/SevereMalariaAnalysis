@@ -125,11 +125,11 @@ Prevalence of G6PD deficiency in this group:
 
 There is a slightly increased number of G6PD deficients seen because they are being selected for by anaemia.
 
-Now we dig into the different grouPIs and see whether the probabilities correspond to the true data generating probabilities:
+Now we dig into the different groups and see whether the probabilities correspond to the true data generating probabilities:
 
 ## Coma between normals and deficients
 
-First for Coma (in this model coma and G6PD are independent so there should be no differences between the grouPIs!):
+First for Coma (in this model coma and G6PD are independent so there should be no differences between the groups!):
 
 ```
 ## 
@@ -153,7 +153,7 @@ First for Coma (in this model coma and G6PD are independent so there should be n
 ##      64      36
 ```
 
-Odds ratio for Anaemia:
+Odds ratio for Coma:
 
 ```r
 O1 = sum(Study_dat$Coma=='Coma' & Study_dat$G6PD=='Normal')/sum(Study_dat$Coma=='No Coma' & Study_dat$G6PD=='Normal')
@@ -220,17 +220,17 @@ O2/O1
 
 Due to the selection bias, you're seeing higher rates of anaemia in the G6PD deficient group (which is expected and corresponds to the model), and you're seeing lower rates of coma.
 
-Therefore you can get this `balancing selection' illusion just from a simple selection bias along with an effect of G6PDdon anaemia.
+Therefore you can get this `balancing selection' illusion just from a simple selection bias along with an effect of G6PDd on anaemia.
 
 # Graphical visualisation of bias
 
 
-We run the model for values of pi from P_anaemia up to 0.35 (50\% increase).
+We run the model for values of pi from P_anaemia up to 0.35 (50\% increase). This is converted into odds ratio for anaemia in G6PDd (x-axis).
 
 
 ```r
 # The number of malaria patients
-N = 10^6
+N = 10^5
 PIs = seq(P_anaemia, 0.35, length.out = 40)
 ORcoma = ORanaemia = array(dim=length(PIs))
 TrueOR_anaemia = array(dim=length(PIs))

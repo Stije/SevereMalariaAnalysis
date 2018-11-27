@@ -102,7 +102,7 @@ round(100*table(Study_dat$G6PD)/Nstudy)
 
 There is a slightly increased number of G6PD deficients seen because they are being selected for by anaemia.
 
-Now we dig into the different grouPIs and see whether the probabilities correspond to the true data generating probabilities:
+Now we dig into the different groups and see whether the probabilities correspond to the true data generating probabilities:
 
 ## Coma between normals and deficients
 
@@ -160,7 +160,7 @@ We run the model for values of pi from P_anaemia up to 0.35 (50\% increase). Thi
 
 ```{r}
 # The number of malaria patients
-N = 10^6
+N = 10^5
 PIs = seq(P_anaemia, 0.35, length.out = 40)
 ORcoma = ORanaemia = array(dim=length(PIs))
 TrueOR_anaemia = array(dim=length(PIs))
@@ -212,7 +212,7 @@ for(i in 1:length(PIs)){
 
 The following plot shows how varying the odds ratio for anaemia changes the observed odds ratio for coma:
 
-```{r ModelSimulation, echo=FALSE}
+```{r ModelSimulation, echo=FALSE, fig.height=8}
 addalpha <- function(colors, alpha=0.5) {
   r <- col2rgb(colors, alpha=T)
   # Apply alpha
@@ -224,34 +224,34 @@ bluecols = brewer.pal(3, 'Blues')
 redcols = brewer.pal(3, 'Reds')
 
 reportcols = brewer.pal(3, 'Accent')
-par(las = 1, bty='n')
+par(las = 1, bty='n', mfrow=c(1,2))
 # Plot for coma first
-plot(TrueOR_anaemia, ORcoma, 
-     xlab = 'Simulated value of anaemia odds ratio in G6PDd',
-     type='l', lwd=3, col =redcols[3], 
-     ylab='Observed odds ratio', 
+plot(TrueOR_anaemia, ORanaemia, 
+     xlab = 'Simulated OR for anaemia in G6PDd',
+     type='l', lwd=3, col =bluecols[3], 
+     ylab='Observed OR for anaemia in G6PDd', 
      ylim = range(c(ORcoma,ORanaemia)), yaxt='n')
-axis(2, at = c(0.7, 1, 1.8))
-abline(h = 1, col = redcols[2], lty=2, lwd =2)
-
-ind = which(ORanaemia>1.22 & ORanaemia<1.8 & ORcoma > 0.69 & ORcoma <0.98)
-
-lines(TrueOR_anaemia, ORcoma,lwd=3, col =redcols[3])
-# Plot for anaemia
-lines(TrueOR_anaemia, ORanaemia, lwd = 3, col=bluecols[3])
 lines(c(1,10),c(1,10), lwd=2, lty=2, col=bluecols[2])
-
-abline(h = c(0.82), col= redcols[1], lwd=2, lty=1)
-polygon(c(1,2,2,1),c(0.69,0.69,0.98,0.98),
-        col=addalpha(redcols[1]), border = NA)
+axis(2, at = c(0.7, 1, 1.8))
 abline(h = 1.48, col= bluecols[1], lwd=2, lty=1)
 polygon(c(1,2,2,1),c(1.22,1.22,1.8,1.8),
         col=addalpha(bluecols[1]), border = NA)
-
+ind = which(ORanaemia>1.22 & ORanaemia<1.8 & ORcoma > 0.69 & ORcoma <0.98)
 xs = range(TrueOR_anaemia[ind])
-
 abline(v = xs, lty=3, lwd=2)
-legend('topleft', col=c(redcols[3],bluecols[3]), legend = c('Coma','Anaemia'),
+############
+plot(TrueOR_anaemia, ORcoma,lwd=3, col =redcols[3],
+     xlab = 'Simulated OR for anaemia in G6PDd',
+     type='l', 
+     ylab='Observed OR for coma in G6PDd', 
+     ylim = range(c(ORcoma,ORanaemia)), yaxt='n')
+axis(2, at = c(0.7, 1, 1.8))
+abline(h = 1, col = redcols[2], lty=2, lwd =2)
+abline(h = c(0.82), col= redcols[1], lwd=2, lty=1)
+polygon(c(1,2,2,1),c(0.69,0.69,0.98,0.98),
+        col=addalpha(redcols[1]), border = NA)
+abline(v = xs, lty=3, lwd=2)
+legend('right', col=c(redcols[3],bluecols[3]), legend = c('Coma','Anaemia'),
        lwd=3, lty=1)
 ```
 
