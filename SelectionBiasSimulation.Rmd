@@ -227,9 +227,9 @@ reportcols = brewer.pal(3, 'Accent')
 par(las = 1, bty='n', mfrow=c(1,2))
 # Plot for coma first
 plot(TrueOR_anaemia, ORanaemia, 
-     xlab = 'Simulated OR for anaemia in G6PDd',
+     xlab = 'Simulated OR for SMA in G6PDd',
      type='l', lwd=3, col =bluecols[3], 
-     ylab='Observed OR for anaemia in G6PDd', 
+     ylab='Observed OR for SMA in G6PDd', 
      ylim = range(c(ORcoma,ORanaemia)), yaxt='n')
 lines(c(1,10),c(1,10), lwd=2, lty=2, col=bluecols[2])
 axis(2, at = c(0.7, 1, 1.8))
@@ -241,9 +241,9 @@ xs = range(TrueOR_anaemia[ind])
 abline(v = xs, lty=3, lwd=2)
 ############
 plot(TrueOR_anaemia, ORcoma,lwd=3, col =redcols[3],
-     xlab = 'Simulated OR for anaemia in G6PDd',
+     xlab = 'Simulated OR for SMA in G6PDd',
      type='l', 
-     ylab='Observed OR for coma in G6PDd', 
+     ylab='Observed OR for CM in G6PDd', 
      ylim = range(c(ORcoma,ORanaemia)), yaxt='n')
 axis(2, at = c(0.7, 1, 1.8))
 abline(h = 1, col = redcols[2], lty=2, lwd =2)
@@ -251,8 +251,9 @@ abline(h = c(0.82), col= redcols[1], lwd=2, lty=1)
 polygon(c(1,2,2,1),c(0.69,0.69,0.98,0.98),
         col=addalpha(redcols[1]), border = NA)
 abline(v = xs, lty=3, lwd=2)
-legend('right', col=c(redcols[3],bluecols[3]), legend = c('Coma','Anaemia'),
-       lwd=3, lty=1)
+legend('topright', col=c(redcols[3],bluecols[3]), 
+       legend = c('Cerebral malaria (CM)','Severe malarial\nanaemia (SMA)'),
+       lwd=3, lty=1, cex=.8)
 ```
 
 

@@ -377,6 +377,8 @@ mtext(side = 3, line = 1, text = 'Decreased survival',adj = 1)
 We stratify by time to death.
 
 Some data adjustments: need to do this elsewhere
+Not open source data.
+
 ```{r, include=FALSE}
 CMAL=readstata13::read.dta13('../../../Datasets/Malaria Core/DBallCore2016_V3.dta')
 CMAL = CMAL[,c('StudyNumber','studyID','Timetodeathhrs')]
