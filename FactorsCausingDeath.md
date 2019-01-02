@@ -99,6 +99,7 @@ First we setup these linear models. Random effect terms are added for study and 
 
 
 ```r
+if(RUN_MODELS){
 K_imputations = 500
 SM_Impute_List = list()
 for (k in 1:K_imputations){
@@ -185,15 +186,9 @@ vars_explanatory = c('HCT','LPAR_pct','coma' ,'convulsions',
                      'poedema','BUN','BD' ,'shock','hypoglycaemia',
                      'drug_AS','studyID','country')
 apply(Imp_data[,vars_explanatory], 2, function(x) sum(is.na(x)))
-```
-
-```
-##           HCT      LPAR_pct          coma   convulsions       poedema 
-##             0             0             0             0             0 
-##           BUN            BD         shock hypoglycaemia       drug_AS 
-##             0             0             0             0             0 
-##       studyID       country 
-##             0             0
+} else {
+  load('RData/Multiple_Imputed_Datasets.RData')
+}
 ```
 
 
@@ -261,20 +256,23 @@ rownames(Results) = FixedEffs$term
 Make the 'forest' plot:
 
 ```r
-plotting_ind = rownames(Results) %in% c('BD','coma','convulsions1','drug_AS','HCT','log2(BUN)','poedema1')
+plotting_ind = rownames(Results) %in% c('BD','coma','convulsions1','drug_AS','HCT',
+                                        'log2(BUN)','poedema1','LPAR_pct','shock1')
+Results['HCT',] = 1/Results['HCT',]
 Results = Results[plotting_ind,]
 x_ind = sort.int(Results$mean, index.return = T)$ix
 Results = Results[x_ind,]
-par(bty='n', las=1, mar = c(3,9,2,2))
+par(bty='n', las=1, mar = c(4,9,2,2))
 
-Y_Labels = c('+10 mEq/L\nbase deficit',
-             'Coma\non admission',
-             'Seizures\non admission',
-             'Artemisinin drug\nversus\nnon Artemisinin drug',
+Y_Labels = c('Artemisinin drug\nversus\nnon Artemisinin drug',
              '-10 % points\nabsolute haematocrit\non admission',
+             'Tenfold increase\n in parasitaemia',
+             'Seizures\non admission',
+             'Shock \non admission',
+             'Pulmonary\nOedema\non admission',
              '3 fold increase\nin blood urea\nnitrogen (mmol/L)',
-             'Pulmonary\nOedema\non admission')
-Y_Labels = Y_Labels[x_ind]
+             '+10 mEq/L\nbase deficit',
+             'Coma\non admission')
 
 xlims = c(0.5, 4.5)
 plot(NA,NA, xlim= log2(xlims), ylim = c(0,1),xaxt='n',
@@ -284,7 +282,7 @@ abline(v=0, lty=2, lwd=3, col='red')
 yindex =1
 ypos = seq(0,1,length.out = sum(plotting_ind))
 
-Results['HCT',] = 1/Results['HCT',]
+
 for(i in 1:nrow(Results)){
   arrows(log2(Results[i,'lowerCI']),ypos[yindex],
          log2(Results[i,'upperCI']),ypos[yindex],
@@ -296,7 +294,7 @@ for(i in 1:nrow(Results)){
 }
 abline(h=ypos, lty=3)
 axis(side = 2, at = ypos, labels = Y_Labels,tick=FALSE)
-mtext(side=1, line = 2, text = 'Adjusted odds ratio')
+mtext(side=1, line = 2.5, text = 'Adjusted odds ratio')
 mtext(side = 3, line = 1, text = 'Increased survival',adj = 0)
 mtext(side = 3, line = 1, text = 'Decreased survival',adj = 1)
 ```

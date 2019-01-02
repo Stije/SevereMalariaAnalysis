@@ -88,7 +88,6 @@ mod_BD_LPAR = gam(formula = BD ~ s(LPAR_pct) + s(studyID, bs='re') +
 mod_BUN_BD = gam(formula = BD ~ s(log10(BUN)) + s(studyID, bs='re') + 
                    s(country, bs='re'),
                  data =Leg_data_complete)
-
 ```
 
 ```{r ExploratoryPlots, echo=FALSE}
@@ -101,11 +100,11 @@ Leg_data_complete$color = as.character(revalue(Leg_data_complete$studyID,
                                                            'AQUAMAT' = mycols[5])))
 par(las=1, mfrow=c(2,2), mar=c(4,4,1,1), bty='n')
 ## Base Excess and HCT
-plot(jitter(Leg_data_complete$HCT,amount=1), 
-     jitter(Leg_data_complete$BD), 
-     col=Leg_data_complete$color, pch='*', xlab='Haematocrit (%)', 
-     ylab='Base deficit (mEq/L)')
-
+plot(jitter(Leg_data_complete$HCT,amount = .4), 
+     jitter(Leg_data_complete$BD, amount = .4), ylim=c(-6,28),
+     col=Leg_data_complete$color, pch='*', xlab='', 
+     ylab='Base deficit (mEq/L)', xlim=c(8,47), panel.first = grid())
+mtext(text = 'Haematocrit (%)',side = 1,line = 2.5)
 ys = predict(object = mod_HCT_BD, 
              newdata = data.frame(HCT=8:50,
                                   studyID='AQ',
@@ -114,25 +113,29 @@ ys = predict(object = mod_HCT_BD,
 lines(8:50, ys, lwd=3, col='black')
 
 ## Parasitaemia and Anaemia
-plot(jitter(Leg_data_complete$LPAR_pct,amount=1), 
-     Leg_data_complete$BD, 
+plot(Leg_data_complete$LPAR_pct, 
+     jitter(Leg_data_complete$BD,amount = .4), 
+     xlim = c(-2.418006, 1.562435),ylim=c(-6,28),
      col=Leg_data_complete$color, pch='*', 
-     xlab='Log10 % parasitised RBCs', 
-     ylab='Base deficit (mEq/L)')
+     xlab='', panel.first = grid(),
+     ylab='Base deficit (mEq/L)', xaxt='n')
+axis(1, at = log10(c(30,10,1,.1,.01)), labels = c(30,10,1,.1,.01))
+mtext(text = 'Parasitised RBCs (%)',side = 1,line = 2.5)
 ys = predict(object = mod_BD_LPAR, 
-             newdata = data.frame(LPAR_pct=seq(-3,3,by=.1),
+             newdata = data.frame(LPAR_pct=seq(-3,log10(50),by=.1),
                                   studyID='AQ',
                                   country='Vietnam'), 
              exclude = c("s(country)","s(studyID)"))
-lines(seq(-3,3,by=.1), ys, lwd=3, col='black')
+lines(seq(-3,log10(50),by=.1), ys, lwd=3, col='black')
 
 ## BUN and BD
-plot(jitter(log10(Leg_data_complete$BUN),amount=.1), 
-     jitter(Leg_data_complete$BD), 
-     col=Leg_data_complete$color, pch='*', 
-     xlab='Blood urea nitrogen (mmol/L)', 
+plot(jitter(log10(Leg_data_complete$BUN),amount = .4),
+     jitter(Leg_data_complete$BD, amount = .4), ylim=c(-6,28),
+     col=Leg_data_complete$color, pch='*', panel.first = grid(),
+     xlab='',xlim = c(0.4771213,2.1461280),
      ylab='Base deficit (mEq/L)', xaxt='n')
-axis(1, at=c(log10(2), 1, 2), labels = c(2,10,100))
+mtext(text = 'Blood urea nitrogen (mmol/L)',side = 1,line = 2.5)
+axis(1, at=c(log10(3), log10(5), 1, log10(30),2), labels = c(3,5,10,30,100))
 
 summary(mod_BUN_BD)
 ys = predict(object = mod_BUN_BD, 
@@ -143,12 +146,12 @@ ys = predict(object = mod_BUN_BD,
 lines(log10(2:166), ys, lwd=3, col='black')
 
 ## Parasitaemia and Anaemia
-plot(jitter(Leg_data_complete$AgeInYear,amount=1), 
-     Leg_data_complete$HCT, 
+plot(jitter(Leg_data_complete$AgeInYear,amount=.4), 
+     jitter(Leg_data_complete$HCT,amount = .4), 
      col=Leg_data_complete$color, pch='*', 
-     xlab='Age (years)', 
-     ylab='Haematocrit (%)')
-
+     xlab='', ylim=c(8,47), panel.first = grid(),
+     ylab='Haematocrit (%)', xlim = c(0,65))
+mtext(text = 'Age (years)',side = 1,line = 2.5)
 summary(mod_Age_HCT)
 ys = predict(object = mod_Age_HCT, 
              newdata = data.frame(AgeInYear=0:80,
@@ -156,11 +159,12 @@ ys = predict(object = mod_Age_HCT,
                                   country='Vietnam'), 
              exclude = c("s(country)","s(studyID)"))
 lines(0:80, ys, lwd=3, col='black')
-legend('topright',col=mycols,legend = c('Core Malaria',
-                                        'AAV',
-                                        'AQ',
-                                        'SEAQUAMAT',
-                                        'AQUAMAT'),pch='*')
+legend('bottomright',col=mycols,inset = 0.01,
+       legend = c('Core Malaria',
+                  'AAV',
+                  'AQ',
+                  'SEAQUAMAT',
+                  'AQUAMAT'),pch='*')
 ```
 
 Effect on survival 
@@ -202,8 +206,10 @@ predsBD = predict(modBD, newdata = data.frame(BD= x_bd,
                                               country='Thailand'), 
                   exclude = c("s(country)","s(studyID)"), 
                   se.fit=T)
-plot(x_bd, 100*inv.logit(predsBD$fit), ylab='mortality (%)', xlab='Base deficit (mEq/L)', 
+plot(x_bd, 100*inv.logit(predsBD$fit), ylab='mortality (%)', 
+     panel.first = grid(), xlab='', 
      type='l', lwd=3,ylim = c(0,80))
+mtext(text = 'Base deficit (mEq/L)',side = 1,line = 2.5, cex=.9)
 polygon(c(x_bd, rev(x_bd)), 100*inv.logit(c(predsBD$fit + 1.96*predsBD$se.fit,
                                             rev(predsBD$fit - 1.96*predsBD$se.fit))),
         lty=2,lwd=2, border = NA, col = rgb(0, 0, 1,0.5))
@@ -215,8 +221,10 @@ predsHCT = predict(modHCT,
                                         country='Thailand'), 
                    exclude = c("s(country)","s(studyID)"), 
                    se.fit=T)
-plot(x_hcts, 100*inv.logit(predsHCT$fit), ylab='mortality (%)', xlab='Haematocrit (%)', 
+plot(x_hcts, 100*inv.logit(predsHCT$fit), ylab='mortality (%)', 
+     panel.first = grid(), xlab='', 
      type='l', lwd=3,ylim = c(0,25))
+mtext(text = 'Haematocrit (%)',side = 1,line = 2.5,cex=.9)
 polygon(c(x_hcts,rev(x_hcts)), 
         100*inv.logit(c(predsHCT$fit + 1.96*predsHCT$se.fit, 
                         rev(predsHCT$fit - 1.96*predsHCT$se.fit))),
@@ -229,8 +237,9 @@ predsBUN = predict(modBUN, newdata = data.frame(BUN=x_BUN,
                    exclude = c("s(country)","s(studyID)"), 
                    se.fit=T)
 plot(log10(x_BUN), 100*inv.logit(predsBUN$fit), ylab='mortality (%)', 
-     xlab='Blood urea nitrogen (mmol/L)', 
+     xlab='', panel.first = grid(), 
      type='l', lwd=3,ylim = c(0,60), xaxt='n')
+mtext(text = 'Blood urea nitrogen (mmol/L)',side = 1,line = 2.5,cex=.9)
 axis(1, at = log10(c(2,10,100)), labels = c(2,10,100))
 polygon(c(log10(x_BUN),rev(log10(x_BUN))), 
         100*inv.logit(c(predsBUN$fit + 1.96*predsBUN$se.fit,
@@ -243,9 +252,12 @@ predscoma = predict(modcoma, newdata = data.frame(coma=x_comas,
                                                   country='Thailand'), 
                     exclude = c("s(country)","s(studyID)"), 
                     se.fit=T)
-plot(x_comas, 100*inv.logit(predscoma$fit), ylab='mortality (%)', xlab='', 
-     type='p', lwd=3, ylim = c(0,28), xaxt='n', pch=19, xlim = c(-.25,1.25))
-axis(1, at=x_comas, labels = c('No Coma','Coma'), tick = F)
+plot(x_comas, 100*inv.logit(predscoma$fit), ylab='mortality (%)', 
+     panel.first = grid(), xlab='', 
+     type='p', lwd=3, ylim = c(0,28), xaxt='n', 
+     pch=19, xlim = c(-.25,1.25))
+axis(1, at=x_comas, labels = c('No Coma','Coma'), 
+     tick = F,line = .5,cex.axis=1.2)
 ys = 100*inv.logit(c(predscoma$fit - 1.96*predscoma$se.fit,
                      predscoma$fit + 1.96*predscoma$se.fit))
 arrows(x0 = x_comas[1],y0 = ys[1], x1 = x_comas[1], y1 = ys[3],
@@ -260,9 +272,12 @@ predsconv = predict(modconv, newdata = data.frame(convulsions=x_conv,
                                                   country='Thailand'), 
                     exclude = c("s(country)","s(studyID)"), 
                     se.fit=T)
-plot(x_conv, 100*inv.logit(predsconv$fit), ylab='mortality (%)', xlab='', 
-     type='p', lwd=3, ylim = c(0,30), xaxt='n',pch=19, xlim = c(-.25,1.25))
-axis(1, at=x_conv, labels = c('No seizures','Seizures'),tick = F)
+plot(x_conv, 100*inv.logit(predsconv$fit), 
+     panel.first = grid(), ylab='mortality (%)', xlab='', 
+     type='p', lwd=3, ylim = c(0,30), xaxt='n',
+     pch=19, xlim = c(-.25,1.25))
+axis(1, at=x_conv, labels = c('No seizures','Seizures'),
+     tick = F,line = .5,cex.axis=1.2)
 
 ys = 100*inv.logit(c(predsconv$fit + 1.96*predsconv$se.fit,
                      predsconv$fit -1.96*predsconv$se.fit))
@@ -278,9 +293,12 @@ predspoedema = predict(modpoedema,
                                             country='Thailand'), 
                        exclude = c("s(country)","s(studyID)"), 
                        se.fit=T)
-plot(x_poedema, 100*inv.logit(predspoedema$fit), ylab='mortality (%)', xlab='', 
-     type='p', lwd=3, ylim = c(0,55), xaxt='n',pch=19, xlim = c(-.25,1.25))
-axis(1, at=x_poedema, labels = c('No Pulmonary\nOedema','Pulmonary\nOedema'),tick = F)
+plot(x_poedema, 100*inv.logit(predspoedema$fit), 
+     panel.first = grid(), ylab='mortality (%)', xlab='', 
+     type='p', lwd=3, ylim = c(0,55), xaxt='n',
+     pch=19, xlim = c(-.25,1.25))
+axis(1, at=x_poedema, labels = c('No Pulmonary\nOedema','Pulmonary\nOedema'),
+     tick = F,line = 1.5,cex.axis=1.2)
 ys = 100*inv.logit(c(predspoedema$fit + 1.96*predspoedema$se.fit,
                      (predspoedema$fit - 1.96*predspoedema$se.fit)))
 arrows(x0 = x_poedema[1],y0 = ys[1], x1 = x_poedema[1], y1 = ys[3],angle = 90,
@@ -328,19 +346,21 @@ rownames(Results) = rownames(FixedEffs)
 
 Make the 'forest' plot:
 ```{r ForestPlot_CompleteData}
-plotting_ind = rownames(Results) %in% c('BD','coma','convulsions1',
-                                        'drug_AS','HCT','log2(BUN)','poedema1')
+plotting_ind = rownames(Results) %in% c('BD','coma','convulsions1','LPAR_pct',
+                                        'drug_AS','HCT','log2(BUN)','poedema1','shock1')
 Results = Results[plotting_ind,]
 Results$Y_Labels = c('-10 % points\nabsolute haematocrit\non admission',
+                     'Tenfold increase\nin parasitaemia',
                      'Coma\non admission',
                      'Seizures\non admission',
                      'Pulmonary\nOedema\non admission',
                      '3 fold increase\nin blood urea\nnitrogen (mmol/L)',
                      '+10 mEq/L\nbase deficit',
+                     'Shock\non admission',
                      'Artemisinin drug\nversus\nnon Artemisinin drug'
 )
 
-
+Results['HCT',1:3] = 1/Results['HCT',1:3]
 x_ind = sort.int(Results$mean, index.return = T)$ix
 Results = Results[x_ind,]
 par(bty='n', las=1, mar = c(3,9,2,2))
@@ -353,7 +373,7 @@ abline(v=0, lty=2, lwd=3, col='red')
 yindex =1
 ypos = seq(0,1,length.out = sum(plotting_ind))
 
-Results['HCT',1:3] = 1/Results['HCT',1:3]
+
 for(i in 1:nrow(Results)){
   arrows(log2(Results[i,'lowerCI']),ypos[yindex],
          log2(Results[i,'upperCI']),ypos[yindex],
@@ -612,11 +632,25 @@ Results = data.frame(lowerCI = exp(Scalar_f*(FixedEffs$estimate -
                      upperCI = exp(Scalar_f*(FixedEffs$estimate +
                                                1.96*FixedEffs$std.error)))
 rownames(Results) = FixedEffs$term
+Results['HCT',] = 1/Results['HCT',]
 Results
+
+Results = Results[!(rownames(Results) %in% c('hypoglycaemia','(Intercept)')),]
+rownames(Results) = c('+10 mEq/L\nbase deficit',
+                      'Coma\non admission',
+                      'Seizures\non admission',
+                      'Artemisinin drug\nversus\nnon Artemisinin drug',
+                      '-10 % points\nabsolute haematocrit\non admission',
+                      '3 fold increase\nin blood urea\nnitrogen (mmol/L)',
+                      'Tenfold increase\nin parasitaemia',
+                      'Pulmonary\nOedema\non admission',
+                      'Shock\non admission',
+                      'Transfusion')
+
 
 x_ind = sort.int(Results$mean, index.return = T)$ix
 Results = Results[x_ind,]
-par(bty='n', las=1, mar = c(3,9,2,2))
+par(bty='n', las=1, mar = c(4,9,2,2))
 
 xlims = c(0.5, 8)
 plot(NA,NA, xlim= log2(xlims), ylim = c(0,1),xaxt='n',
@@ -626,7 +660,7 @@ abline(v=0, lty=2, lwd=3, col='red')
 yindex =1
 ypos = seq(0,1,length.out = nrow(Results))
 
-Results['HCT',] = 1/Results['HCT',]
+
 for(i in 1:nrow(Results)){
   arrows(log2(Results[i,'lowerCI']),ypos[yindex],
          log2(Results[i,'upperCI']),ypos[yindex],
@@ -638,7 +672,258 @@ for(i in 1:nrow(Results)){
 }
 abline(h=ypos, lty=3)
 axis(side = 2, at = ypos, labels = rownames(Results),tick=FALSE)
-mtext(side=1, line = 2, text = 'Adjusted odds ratio')
+mtext(side=1, line = 2.5, text = 'Adjusted odds ratio')
+mtext(side = 3, line = 1, text = 'Increased survival',adj = 0)
+mtext(side = 3, line = 1, text = 'Decreased survival',adj = 1)
+
+```
+
+
+## Effect of unmeasured sepsis
+
+Select the patients in Asia (no concomitant sepsis):
+
+```{r}
+load('RData/Data.RData')
+m$coma[is.na(m$coma) & m$studyID=='AQ'] = 0
+
+m$drug_AS = 0
+m$drug_AS[m$drug_class=='artemisinin']=1
+m$LPAR_pct[is.infinite(m$LPAR_pct)] = 0
+
+m = filter(m, country %in% c('Bangladesh','India','Indonesia','Myanmar','Thailand','Vietnam'))
+```
+
+
+Multiple Imputation:
+```{r}
+###----- Do the imputation and get the indices for imputation
+# Base deficit and lactate
+BD_and_lactate = !is.na(m$BD) & !is.na(m$lactate)
+mod_impute2 = lmer(BD ~ lactate + (1 | country), 
+                   data= m[BD_and_lactate,])
+# Base deficit and rr
+BD_and_rr = !is.na(m$BD) & !is.na(m$rr)
+mod_impute3 = lmer(BD ~ rr + (1 | studyID) + (1 | country), 
+                   data= m[BD_and_rr,])
+
+ind1 = is.na(m$BD) & !is.na(m$bicarbonate)
+ind2 = !ind1 & is.na(m$BD) & !is.na(m$lactate)
+ind3 = !ind1 & !ind2 & is.na(m$BD) & !is.na(m$rr)
+
+# BUN and creatinine
+BUN_and_cr = !is.na(m$BUN) & !is.na(m$creatinine)
+mod_impute4 = lmer(log(BUN) ~ creatinine + (1 | studyID) + (1 | country), 
+                   data= m[BUN_and_cr,])
+ind4 = is.na(m$BUN) & !is.na(m$creatinine)
+
+# Age from HCT
+HCT_and_Age = !is.na(m$AgeInYear) & !is.na(m$HCT)
+mod_impute5 = lmer(HCT ~ AgeInYear + (1 | studyID) + (1 | country),
+                   data = m[HCT_and_Age,])
+ind5 = is.na(m$HCT) & !is.na(m$AgeInYear)
+
+# marginal distribution of BD to impute remaining
+BD_alone = !is.na(m$BD)
+mod_impute6 = lmer(BD ~ AgeInYear + (1 | studyID) + (1 | country),
+                   data = m[BD_alone,])
+ind6 = !ind1 & !ind2 & !ind3 & is.na(m$BD)
+
+# marginal distribution of coma 
+Coma_alone = !is.na(m$coma)
+mod_impute7 = glmer(coma ~ AgeInYear + hypoglycaemia + (1 | studyID) + (1 | country),
+                    family = 'binomial',
+                    data = m[Coma_alone,])
+ind7 = is.na(m$coma)
+
+# marginal distribution of LPAR_pct 
+LPAR_pct_alone = !is.na(m$LPAR_pct)
+mod_impute8 = lmer(LPAR_pct ~ AgeInYear + (1 | studyID) + (1 | country),
+                   data = m[LPAR_pct_alone,])
+ind8 = is.na(m$LPAR_pct)
+
+# marginal distribution of LPAR_pct 
+Hypoglycaemia_alone = !is.na(m$hypoglycaemia)
+mod_impute9 = glmer(hypoglycaemia ~ 1 + (1 | studyID) + (1 | country),
+                    data = m[Hypoglycaemia_alone,], family='binomial')
+ind9 = is.na(m$hypoglycaemia)
+
+# marginal distribution of BUN 
+BUN_alone = !is.na(m$BUN)
+mod_impute10 = lmer(log(BUN) ~ 1 + (1 | studyID) + (1 | country),
+                    data = m[BUN_alone,])
+ind10 = !ind4 & is.na(m$BUN)
+
+#transfusion from HCT
+TF_and_HCT = !is.na(m$transfusion) & !is.na(m$HCT)
+mod_impute0 = glmer(transfusion ~ HCT + (1 | studyID) + (1 | country), 
+                    data= m[TF_and_HCT,], family = 'binomial')
+ind0 = is.na(m$transfusion) & !is.na(m$HCT)
+
+#----------------------------------------------------------------------
+K_imputations = 100
+
+SM_Impute_List = list()
+
+for(k in 1:K_imputations){
+  #print(k)
+  Imp_data = m
+  
+  # BD from lactate
+  coefs2 = summary(mod_impute2)$coefficients
+  Imp_data$BD[ind2] = rnorm(n = sum(ind2), 
+                            mean = predict(mod_impute2, newdata = m[ind2,],allow.new.levels=T),
+                            sd = coefs2[1,'Std. Error'] + 
+                              coefs2[2,'Std. Error']*m$lactate[ind2])
+  
+  # BD from respiratory rate
+  coefs3 = summary(mod_impute3)$coefficients
+  Imp_data$BD[ind3] = rnorm(n = sum(ind3), 
+                            mean = predict(mod_impute3, newdata = m[ind3,],allow.new.levels=T),
+                            sd = coefs3[1,'Std. Error'] + 
+                              coefs3[2,'Std. Error']*m$rr[ind3])
+  
+  # BUN from creatinine
+  coefs4 = summary(mod_impute4)$coefficients
+  Imp_data$BUN[ind4] = exp(rnorm(n = sum(ind4), 
+                                 mean = predict(mod_impute4, newdata = m[ind4,],allow.new.levels=T),
+                                 sd = coefs4[1,'Std. Error'] + 
+                                   coefs4[2,'Std. Error']*m$creatinine[ind4]))
+  
+  # HCT from Age
+  coefs5 = summary(mod_impute5)$coefficients
+  Imp_data$HCT[ind5] = rnorm(n = sum(ind5), 
+                             mean = predict(mod_impute5, newdata = m[ind5,],
+                                            allow.new.levels=T),
+                             sd = coefs5[1,'Std. Error'] + 
+                               coefs5[2,'Std. Error']*m$AgeInYear[ind5])
+  
+  # BD from age
+  coefs6 = summary(mod_impute6)$coefficients
+  Imp_data$BD[ind6] = rnorm(n = sum(ind6), 
+                            mean = predict(mod_impute6, newdata = m[ind6,],
+                                           allow.new.levels=T),
+                            sd = coefs6[1,'Std. Error'] + 
+                              coefs6[2,'Std. Error']*m$AgeInYear[ind6])
+  
+  # Coma from hypoglycaemia
+  coefs7 = summary(mod_impute7)$coefficients
+  Imp_data$coma[ind7] = rbinom(n = sum(ind7), size = 1,
+                               predict(mod_impute7, newdata = m[ind7,],
+                                       allow.new.levels=T, type='response'))
+  
+  # Parasitaemia from age
+  coefs8 = summary(mod_impute8)$coefficients
+  Imp_data$LPAR_pct[ind8] = rnorm(n = sum(ind8), 
+                                  mean = predict(mod_impute8, 
+                                                 newdata = m[ind8,],
+                                                 allow.new.levels=T),
+                                  sd = coefs8[1,'Std. Error'] + 
+                                    coefs8[2,'Std. Error']*m$AgeInYear[ind8])
+  
+  # Hypoglycaemia: marginal
+  coefs9 = summary(mod_impute9)$coefficients
+  Imp_data$hypoglycaemia[ind9] = rbinom(n = sum(ind9),size = 1, 
+                                        prob = predict(mod_impute9, 
+                                                       newdata = m[ind9,],
+                                                       allow.new.levels=T,
+                                                       type='response'))
+  
+  # BUN: marginal
+  coefs10 = summary(mod_impute10)$coefficients
+  Imp_data$BUN[ind10] = exp(rnorm(n = sum(ind10), 
+                                  mean = predict(mod_impute10, newdata = m[ind10,],
+                                                 allow.new.levels=T),
+                                  sd = coefs10[1,'Std. Error']))
+  
+  # Transfusion from HCT
+  coefs0 = summary(mod_impute0)$coefficients
+  Imp_data$HCT[ind0] = rbinom(n = sum(ind0), size = 1,
+                              predict(mod_impute0, newdata = m[ind0,],
+                                      allow.new.levels=T, type='response'))
+  
+  SM_Impute_List[[k]] = Imp_data
+  
+}
+
+
+```
+
+run the models on the list of imputed datsets
+```{r}
+if(RUN_MODELS){
+  DAG_fmla = "outcome ~ HCT + LPAR_pct + coma + convulsions + poedema + 
+                      log2(BUN) + BD + shock + hypoglycaemia + 
+                      drug_AS + (1 | studyID) + (1 | country)"
+  # fit the model to each dataset
+  modList= glmerModList(DAG_fmla,data = SM_Impute_List, 
+                        family=binomial,parallel = T) 
+  save(modList, file = 'RData/ModelList_Asia.RData')
+} else{
+  load(file = 'RData/ModelList_Asia.RData')
+}
+
+FixedEffs = modelFixedEff(modList)
+RandEffs = modelRandEffStats(modList)
+print(FixedEffs)
+print(RandEffs)
+```
+
+
+
+```{r ForestPlot_Asia, echo=FALSE}
+# The scalar multiples to put the AORs on the correct scales
+Scalar_f = c(1, 10, 1, 1, 1, 10, 1, log2(3), 1, 1, 1)
+# Compute 95% CIs
+Results = data.frame(lowerCI = exp(Scalar_f*(FixedEffs$estimate -
+                                               1.96*FixedEffs$std.error)),
+                     mean = exp(Scalar_f*(FixedEffs$estimate)),
+                     upperCI = exp(Scalar_f*(FixedEffs$estimate +
+                                               1.96*FixedEffs$std.error)))
+rownames(Results) = FixedEffs$term
+Results
+
+
+
+
+Results['HCT',] = 1/Results['HCT',]
+Results = Results[!(rownames(Results) %in% c('hypoglycaemia','(Intercept)')),]
+rownames(Results) = c('+10 mEq/L\nbase deficit',
+                      'Coma\non admission',
+                      'Seizures\non admission',
+                      'Artemisinin drug\nversus\nnon Artemisinin drug',
+                      '-10 % points\nabsolute haematocrit\non admission',
+                      '3 fold increase\nin blood urea\nnitrogen (mmol/L)',
+                      'Tenfold increase\nin parasitaemia',
+                      'Pulmonary\nOedema\non admission',
+                      'Shock\non admission')
+
+x_ind = sort.int(Results$mean, index.return = T)$ix
+Results = Results[x_ind,]
+par(bty='n', las=1, mar = c(4,9,2,2))
+
+
+xlims = c(0.5,4)
+plot(NA,NA, xlim= log2(xlims), ylim = c(0,1),xaxt='n',
+     xlab='', ylab='', yaxt='n')
+axis(1, at = log2(c(0.5,1, 2,4)), labels = c(0.5,1, 2,4))
+abline(v=0, lty=2, lwd=3, col='red')
+yindex =1
+ypos = seq(0,1,length.out = nrow(Results))
+
+
+for(i in 1:nrow(Results)){
+  arrows(log2(Results[i,'lowerCI']),ypos[yindex],
+         log2(Results[i,'upperCI']),ypos[yindex],
+         length=0.05, angle=90, code=3, 
+         col = 'black',lwd=3)
+  points(log2(Results[i,'mean']),ypos[yindex],pch=18,cex=2)
+  yindex=yindex+1
+  
+}
+abline(h=ypos, lty=3)
+axis(side = 2, at = ypos, labels = rownames(Results),tick=FALSE)
+mtext(side=1, line = 2.5, text = 'Adjusted odds ratio')
 mtext(side = 3, line = 1, text = 'Increased survival',adj = 0)
 mtext(side = 3, line = 1, text = 'Decreased survival',adj = 1)
 
