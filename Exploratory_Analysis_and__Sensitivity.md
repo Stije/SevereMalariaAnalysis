@@ -157,7 +157,13 @@ modpoedema=gam(outcome ~ poedema + s(studyID, bs='re') + s(country, bs='re'),
 modconv=gam(outcome ~ convulsions + s(studyID, bs='re') + s(country, bs='re'),
             data = Leg_data_complete, family='binomial')
 
+modshock=gam(outcome ~ shock + s(studyID, bs='re') + s(country, bs='re'),
+            data = Leg_data_complete, family='binomial')
+
 modBUN=gam(outcome ~ s(log10(BUN)) + s(studyID, bs='re') + s(country, bs='re'),
+           data = Leg_data_complete, family='binomial')
+
+modLPAR_pct=gam(outcome ~ s(LPAR_pct) + s(studyID, bs='re') + s(country, bs='re'),
            data = Leg_data_complete, family='binomial')
 ```
 
