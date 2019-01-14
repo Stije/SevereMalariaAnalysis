@@ -242,8 +242,46 @@ print(RandEffs)
 Aggregate results for plotting:
 
 ```r
+writeLines(sprintf('Standard deviation of base deficit in patient population is %s',
+                  round(sd(m$BD,na.rm=T))))
+```
+
+```
+## Standard deviation of base deficit in patient population is 7
+```
+
+```r
+writeLines(sprintf('Standard deviation of blood urea nitrogen in patient population is %s',
+                  round(2^sd(log2(m$BUN),na.rm=T))))
+```
+
+```
+## Standard deviation of blood urea nitrogen in patient population is 2
+```
+
+```r
+writeLines(sprintf('Standard deviation of parasitised RBCs in patient population is %s',
+                  round(10^sd(m$LPAR_pct,na.rm=T))))
+```
+
+```
+## Standard deviation of parasitised RBCs in patient population is 6
+```
+
+```r
+writeLines(sprintf('Standard deviation of haematocrits in patient population is %s',
+                  round(sd(m$HCT,na.rm=T))))
+```
+
+```
+## Standard deviation of haematocrits in patient population is 10
+```
+
+
+
+```r
 # The scalar multiples to put the AORs on the correct scales
-Scalar_f = c(1, 10, 1, 1, 1, 10, 1, log2(3), 1, 1, 1)
+Scalar_f = c(1, 7, 1, 1, 1, 10, 1, 1, log10(6), 1, 1)
 # Compute 95% CIs
 Results = data.frame(lowerCI = exp(Scalar_f*(FixedEffs$estimate -
                                                1.96*FixedEffs$std.error)),
@@ -262,16 +300,33 @@ Results['HCT',] = 1/Results['HCT',]
 Results = Results[plotting_ind,]
 x_ind = sort.int(Results$mean, index.return = T)$ix
 Results = Results[x_ind,]
+print(round(Results,2))
+```
+
+```
+##              lowerCI mean upperCI
+## drug_AS         0.55 0.63    0.74
+## HCT             0.95 0.87    0.80
+## LPAR_pct        0.94 1.02    1.11
+## convulsions1    1.15 1.39    1.67
+## shock1          1.16 1.53    2.02
+## log2(BUN)       1.60 1.73    1.88
+## poedema1        1.10 2.03    3.75
+## BD              1.90 2.06    2.25
+## coma            3.10 3.63    4.25
+```
+
+```r
 par(bty='n', las=1, mar = c(4,9,2,2))
 
-Y_Labels = c('Artemisinin drug\nversus\nnon Artemisinin drug',
+Y_Labels = c('Artemisinin drug\nversus\nnon artemisinin drug',
              '-10 % points\nabsolute haematocrit\non admission',
-             'Tenfold increase\n in parasitaemia',
+             'Six fold increase\n in parasitised\nred blood cells',
              'Seizures\non admission',
              'Shock \non admission',
-             'Pulmonary\nOedema\non admission',
-             '3 fold increase\nin blood urea\nnitrogen (mmol/L)',
-             '+10 mEq/L\nbase deficit',
+             'Pulmonary\noedema\non admission',
+             'Two fold increase\nin blood urea\nnitrogen (mmol/L)',
+             '+7 mEq/L\nbase deficit',
              'Coma\non admission')
 
 xlims = c(0.5, 4.5)
