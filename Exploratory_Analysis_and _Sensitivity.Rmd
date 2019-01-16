@@ -27,6 +27,7 @@ require(boot)
 require(plyr)
 require(dplyr)
 library(mgcv) # For the GAM modelling
+library(epitools) # For risk ratio Wald CIs
 ```
 
 
@@ -350,6 +351,18 @@ arrows(x0 = x_shock[1],y0 = ys[1], x1 = x_shock[1], y1 = ys[3],angle = 90,
        lwd=6,code = 3,length=.15,col = rgb(0, 0, 1,0.5))
 arrows(x0 = x_shock[2],y0 = ys[2], x1 = x_shock[2], y1 = ys[4],angle = 90,
        lwd=6,code = 3,length=.15,col = rgb(0, 0, 1,0.5))
+```
+
+Compute risk ratios with confidence intervals for the binary predictors:
+```{r}
+writeLines('\nComa risk ratio calculations:\n')
+riskratio(x = table(Leg_data_complete$coma,Leg_data_complete$outcome),method = 'wald')
+writeLines('\nShock risk ratio calculations:\n')
+riskratio(x = table(Leg_data_complete$shock,Leg_data_complete$outcome),method = 'wald')
+writeLines('\nConvulsions risk ratio calculations:\n')
+riskratio(x = table(Leg_data_complete$convulsions,Leg_data_complete$outcome),method = 'wald')
+writeLines('\nPulmonary oedema risk ratio calculations:\n')
+riskratio(x = table(Leg_data_complete$poedema,Leg_data_complete$outcome),method = 'wald')
 ```
 
 # Sensitivity Analysis
