@@ -169,6 +169,173 @@ modLPAR_pct=gam(outcome ~ s(LPAR_pct) + s(studyID, bs='re') + s(country, bs='re'
 
 ![](Exploratory_Analysis_and__Sensitivity_files/figure-html/UnadjustedPlots-1.png)<!-- -->
 
+Compute risk ratios with confidence intervals for the binary predictors:
+
+```r
+writeLines('\nComa risk ratio calculations:\n')
+```
+
+```
+## 
+## Coma risk ratio calculations:
+```
+
+```r
+riskratio(x = table(Leg_data_complete$coma,Leg_data_complete$outcome),method = 'wald')
+```
+
+```
+## $data
+##        
+##            0   1 Total
+##   0     3190 197  3387
+##   1     1417 484  1901
+##   Total 4607 681  5288
+## 
+## $measure
+##    risk ratio with 95% C.I.
+##     estimate    lower    upper
+##   0 1.000000       NA       NA
+##   1 4.377359 3.745742 5.115483
+## 
+## $p.value
+##    two-sided
+##     midp.exact fisher.exact   chi.square
+##   0         NA           NA           NA
+##   1          0 2.873847e-89 4.510489e-93
+## 
+## $correction
+## [1] FALSE
+## 
+## attr(,"method")
+## [1] "Unconditional MLE & normal approximation (Wald) CI"
+```
+
+```r
+writeLines('\nShock risk ratio calculations:\n')
+```
+
+```
+## 
+## Shock risk ratio calculations:
+```
+
+```r
+riskratio(x = table(Leg_data_complete$shock,Leg_data_complete$outcome),method = 'wald')
+```
+
+```
+## $data
+##        
+##            0   1 Total
+##   0     4387 629  5016
+##   1      227  55   282
+##   Total 4614 684  5298
+## 
+## $measure
+##    risk ratio with 95% C.I.
+##     estimate    lower    upper
+##   0 1.000000       NA       NA
+##   1 1.555323 1.213565 1.993324
+## 
+## $p.value
+##    two-sided
+##      midp.exact fisher.exact   chi.square
+##   0          NA           NA           NA
+##   1 0.001326233  0.001315026 0.0006903902
+## 
+## $correction
+## [1] FALSE
+## 
+## attr(,"method")
+## [1] "Unconditional MLE & normal approximation (Wald) CI"
+```
+
+```r
+writeLines('\nConvulsions risk ratio calculations:\n')
+```
+
+```
+## 
+## Convulsions risk ratio calculations:
+```
+
+```r
+riskratio(x = table(Leg_data_complete$convulsions,Leg_data_complete$outcome),method = 'wald')
+```
+
+```
+## $data
+##        
+##            0   1 Total
+##   0     3706 488  4194
+##   1      908 196  1104
+##   Total 4614 684  5298
+## 
+## $measure
+##    risk ratio with 95% C.I.
+##     estimate    lower    upper
+##   0 1.000000       NA       NA
+##   1 1.525793 1.310761 1.776101
+## 
+## $p.value
+##    two-sided
+##       midp.exact fisher.exact   chi.square
+##   0           NA           NA           NA
+##   1 1.822527e-07 1.838727e-07 6.898686e-08
+## 
+## $correction
+## [1] FALSE
+## 
+## attr(,"method")
+## [1] "Unconditional MLE & normal approximation (Wald) CI"
+```
+
+```r
+writeLines('\nPulmonary oedema risk ratio calculations:\n')
+```
+
+```
+## 
+## Pulmonary oedema risk ratio calculations:
+```
+
+```r
+riskratio(x = table(Leg_data_complete$poedema,Leg_data_complete$outcome),method = 'wald')
+```
+
+```
+## Warning in chisq.test(xx, correct = correction): Chi-squared approximation
+## may be incorrect
+```
+
+```
+## $data
+##        
+##            0   1 Total
+##   0     4606 673  5279
+##   1        8  11    19
+##   Total 4614 684  5298
+## 
+## $measure
+##    risk ratio with 95% C.I.
+##     estimate    lower   upper
+##   0 1.000000       NA      NA
+##   1 4.541253 3.074995 6.70667
+## 
+## $p.value
+##    two-sided
+##       midp.exact fisher.exact   chi.square
+##   0           NA           NA           NA
+##   1 4.764254e-06 4.349083e-06 4.679905e-09
+## 
+## $correction
+## [1] FALSE
+## 
+## attr(,"method")
+## [1] "Unconditional MLE & normal approximation (Wald) CI"
+```
+
 # Sensitivity Analysis
 
 ## Only using complete records
@@ -341,10 +508,6 @@ m$Outcome4hours[!is.na(m$Timetodeathhrs) & m$Timetodeathhrs < 4] = 1
 
 # We only look at individuals who survive past 4 hours
 m = filter(m, Outcome4hours==0)
-```
-
-```
-## Warning: package 'bindrcpp' was built under R version 3.4.4
 ```
 
 
@@ -565,14 +728,14 @@ print(RandEffs)
 ```
 ##                    lowerCI         mean     upperCI
 ## (Intercept)   0.0001163752 0.0006479256 0.003607363
-## BD            2.2218571479 2.5550951120 2.938312680
+## BD            1.7486435612 1.9283459489 2.126515764
 ## coma          2.8804457926 3.4677645599 4.174836782
 ## convulsions1  1.1999302616 1.4703658351 1.801751117
 ## drug_AS       0.5836440055 0.6900175088 0.815778382
 ## HCT           0.9798943042 0.8768621019 0.784663348
 ## hypoglycaemia 1.3641014986 1.7637387224 2.280456611
-## log2(BUN)     2.1179640649 2.4574205846 2.851283471
-## LPAR_pct      0.8897867936 1.0061825876 1.137804480
+## log2(BUN)     1.6055792023 1.7634580363 1.936861315
+## LPAR_pct      0.9131388131 1.0048076972 1.105679108
 ## poedema1      1.6209267562 3.7520057685 8.684875633
 ## shock1        0.9127565863 1.2642697203 1.751154634
 ## transfusion   0.7866423938 0.9938283311 1.255582917
@@ -802,14 +965,14 @@ print(RandEffs)
 ```
 ##                  lowerCI        mean     upperCI
 ## (Intercept)   0.00158783 0.003460346 0.007541103
-## BD            2.64770644 3.237663789 3.959074403
+## BD            1.97701008 2.275947415 2.620086108
 ## coma          2.30689640 2.903172562 3.653571498
 ## convulsions1  0.88821421 1.221985881 1.681181718
 ## drug_AS       0.45945348 0.578628844 0.728716520
 ## HCT           1.01995988 1.127876476 1.247211163
 ## hypoglycaemia 0.88686068 1.572399880 2.787857719
-## log2(BUN)     1.89171334 2.262643728 2.706306780
-## LPAR_pct      0.89120606 1.033741277 1.199072894
+## log2(BUN)     1.49512073 1.673932327 1.874129213
+## LPAR_pct      0.91427200 1.026158874 1.151738252
 ## poedema1      1.01640042 1.919108022 3.623547900
 ## shock1        1.01399639 1.460690791 2.104166844
 ```

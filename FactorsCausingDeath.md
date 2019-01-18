@@ -319,19 +319,22 @@ print(round(Results,2))
 ```r
 par(bty='n', las=1, mar = c(4,9,2,2))
 
-Y_Labels = c('Artemisinin drug\nversus\nnon artemisinin drug',
+Y_Labels = c('Artemisinin derivative\nversus quinine',
              '-10 % points\nabsolute haematocrit\non admission',
              'Six fold increase\n in parasitised\nred blood cells',
              'Seizures\non admission',
-             'Shock \non admission',
-             'Pulmonary\noedema\non admission',
+             'Shock\non admission',
              'Two fold increase\nin blood urea\nnitrogen (mmol/L)',
+             'Pulmonary\noedema\non admission',
              '+7 mEq/L\nbase deficit',
              'Coma\non admission')
-
+Results_FM = Results
+rownames(Results_FM) = Y_Labels
+save(Results_FM, file = 'Results_fullmodel.RData')
 xlims = c(0.5, 4.5)
 plot(NA,NA, xlim= log2(xlims), ylim = c(0,1),xaxt='n',
      xlab='', ylab='', yaxt='n')
+abline(v= seq(-1,3,by=1),col = "lightgray", lty = "dotted",lwd = par("lwd"))
 axis(1, at = log2(c(0.5,1, 2,4)), labels = c(0.5,1, 2,4))
 abline(v=0, lty=2, lwd=3, col='red')
 yindex =1
@@ -341,7 +344,7 @@ ypos = seq(0,1,length.out = sum(plotting_ind))
 for(i in 1:nrow(Results)){
   arrows(log2(Results[i,'lowerCI']),ypos[yindex],
          log2(Results[i,'upperCI']),ypos[yindex],
-         length=0.05, angle=90, code=3, 
+         length=0.0, angle=90, code=3, 
          col = 'black',lwd=3)
   points(log2(Results[i,'mean']),ypos[yindex],pch=18,cex=2)
   yindex=yindex+1

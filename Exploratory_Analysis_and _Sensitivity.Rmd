@@ -187,13 +187,13 @@ modconv=gam(outcome ~ convulsions + s(studyID, bs='re') + s(country, bs='re'),
             data = Leg_data_complete, family='binomial')
 
 modshock=gam(outcome ~ shock + s(studyID, bs='re') + s(country, bs='re'),
-            data = Leg_data_complete, family='binomial')
+             data = Leg_data_complete, family='binomial')
 
 modBUN=gam(outcome ~ s(log10(BUN)) + s(studyID, bs='re') + s(country, bs='re'),
            data = Leg_data_complete, family='binomial')
 
 modLPAR_pct=gam(outcome ~ s(LPAR_pct) + s(studyID, bs='re') + s(country, bs='re'),
-           data = Leg_data_complete, family='binomial')
+                data = Leg_data_complete, family='binomial')
 ```
 
 ```{r UnadjustedPlots, echo=FALSE}
@@ -257,10 +257,10 @@ polygon(c(log10(x_BUN),rev(log10(x_BUN))),
 
 #************** Log10 parasitaemia
 predspara_PCT = predict(modLPAR_pct, newdata = data.frame(LPAR_pct=x_parasites, 
-                                                studyID='AQ', 
-                                                country='Thailand'), 
-                   exclude = c("s(country)","s(studyID)"), 
-                   se.fit=T)
+                                                          studyID='AQ', 
+                                                          country='Thailand'), 
+                        exclude = c("s(country)","s(studyID)"), 
+                        se.fit=T)
 plot(x_parasites, 100*inv.logit(predspara_PCT$fit), ylab='mortality (%)', 
      xlab='', panel.first = grid(), 
      type='l', lwd=3,ylim = c(0,25), xaxt='n')
@@ -334,11 +334,11 @@ arrows(x0 = x_poedema[2],y0 = ys[2], x1 = x_poedema[2], y1 = ys[4],angle = 90,
 
 #************** Shock
 predsshock = predict(modshock, 
-                       newdata = data.frame(shock=x_shock, 
-                                            studyID='AQ', 
-                                            country='Thailand'), 
-                       exclude = c("s(country)","s(studyID)"), 
-                       se.fit=T)
+                     newdata = data.frame(shock=x_shock, 
+                                          studyID='AQ', 
+                                          country='Thailand'), 
+                     exclude = c("s(country)","s(studyID)"), 
+                     se.fit=T)
 plot(x_shock, 100*inv.logit(predsshock$fit), 
      panel.first = grid(), ylab='mortality (%)', xlab='', 
      type='p', lwd=3, ylim = c(0,27), xaxt='n',
@@ -681,7 +681,7 @@ print(RandEffs)
 
 ```{r ForestPlot_TransfusionAdjusted, echo=FALSE}
 # The scalar multiples to put the AORs on the correct scales
-Scalar_f = c(1, 10, 1, 1, 1, 10, 1, log2(3), 1, 1, 1, 1)
+Scalar_f = c(1, 7, 1, 1, 1, 10, 1, 1, log10(6), 1, 1, 1)
 # Compute 95% CIs
 Results = data.frame(lowerCI = exp(Scalar_f*(FixedEffs$estimate -
                                                1.96*FixedEffs$std.error)),
@@ -693,14 +693,14 @@ Results['HCT',] = 1/Results['HCT',]
 Results
 
 Results = Results[!(rownames(Results) %in% c('hypoglycaemia','(Intercept)')),]
-rownames(Results) = c('+10 mEq/L\nbase deficit',
+rownames(Results) = c('+7 mEq/L\nbase deficit',
                       'Coma\non admission',
                       'Seizures\non admission',
-                      'Artemisinin drug\nversus\nnon Artemisinin drug',
+                      'Artemisinin derivative\nversus quinine',
                       '-10 % points\nabsolute haematocrit\non admission',
-                      '3 fold increase\nin blood urea\nnitrogen (mmol/L)',
-                      'Tenfold increase\nin parasitaemia',
-                      'Pulmonary\nOedema\non admission',
+                      'Two fold increase\nin blood urea\nnitrogen (mmol/L)',
+                      'Six fold increase\n in parasitised\nred blood cells',
+                      'Pulmonary\noedema\non admission',
                       'Shock\non admission',
                       'Transfusion')
 
@@ -712,18 +712,21 @@ par(bty='n', las=1, mar = c(4,9,2,2))
 xlims = c(0.5, 8)
 plot(NA,NA, xlim= log2(xlims), ylim = c(0,1),xaxt='n',
      xlab='', ylab='', yaxt='n')
+abline(v= seq(-1,3,by=1),col = "lightgray", lty = "dotted",lwd = par("lwd"))
 axis(1, at = log2(c(0.5,1, 2,4,8)), labels = c(0.5,1, 2,4,8))
 abline(v=0, lty=2, lwd=3, col='red')
 yindex =1
 ypos = seq(0,1,length.out = nrow(Results))
 
-
 for(i in 1:nrow(Results)){
+  
   arrows(log2(Results[i,'lowerCI']),ypos[yindex],
          log2(Results[i,'upperCI']),ypos[yindex],
-         length=0.05, angle=90, code=3, 
+         length=0.0, angle=90, code=3, 
          col = 'black',lwd=3)
   points(log2(Results[i,'mean']),ypos[yindex],pch=18,cex=2)
+  
+  
   yindex=yindex+1
   
 }
@@ -930,7 +933,7 @@ print(RandEffs)
 
 ```{r ForestPlot_Asia, echo=FALSE}
 # The scalar multiples to put the AORs on the correct scales
-Scalar_f = c(1, 10, 1, 1, 1, 10, 1, log2(3), 1, 1, 1)
+Scalar_f = c(1, 7, 1, 1, 1, 10, 1, 1, log10(6), 1, 1)
 # Compute 95% CIs
 Results = data.frame(lowerCI = exp(Scalar_f*(FixedEffs$estimate -
                                                1.96*FixedEffs$std.error)),
@@ -940,19 +943,16 @@ Results = data.frame(lowerCI = exp(Scalar_f*(FixedEffs$estimate -
 rownames(Results) = FixedEffs$term
 Results
 
-
-
-
 Results['HCT',] = 1/Results['HCT',]
 Results = Results[!(rownames(Results) %in% c('hypoglycaemia','(Intercept)')),]
-rownames(Results) = c('+10 mEq/L\nbase deficit',
+rownames(Results) = c('+7 mEq/L\nbase deficit',
                       'Coma\non admission',
                       'Seizures\non admission',
-                      'Artemisinin drug\nversus\nnon Artemisinin drug',
+                      'Artemisinin derivative\nversus quinine',
                       '-10 % points\nabsolute haematocrit\non admission',
-                      '3 fold increase\nin blood urea\nnitrogen (mmol/L)',
-                      'Tenfold increase\nin parasitaemia',
-                      'Pulmonary\nOedema\non admission',
+                      'Two fold increase\nin blood urea\nnitrogen (mmol/L)',
+                      'Six fold increase\n in parasitised\nred blood cells',
+                      'Pulmonary\noedema\non admission',
                       'Shock\non admission')
 
 x_ind = sort.int(Results$mean, index.return = T)$ix
@@ -960,21 +960,34 @@ Results = Results[x_ind,]
 par(bty='n', las=1, mar = c(4,9,2,2))
 
 
-xlims = c(0.5,4)
+xlims = c(0.47,4)
 plot(NA,NA, xlim= log2(xlims), ylim = c(0,1),xaxt='n',
      xlab='', ylab='', yaxt='n')
+abline(v= seq(-1,3,by=1),col = "lightgray", lty = "dotted",lwd = par("lwd"))
 axis(1, at = log2(c(0.5,1, 2,4)), labels = c(0.5,1, 2,4))
 abline(v=0, lty=2, lwd=3, col='red')
 yindex =1
 ypos = seq(0,1,length.out = nrow(Results))
 
+eps = .2 * 1/(nrow(Results)-1)
+load('Results_fullmodel.RData')
 
 for(i in 1:nrow(Results)){
+  
+  name_i = rownames(Results)[i]
+  j = rownames(Results_FM)==name_i
   arrows(log2(Results[i,'lowerCI']),ypos[yindex],
          log2(Results[i,'upperCI']),ypos[yindex],
-         length=0.05, angle=90, code=3, 
+         length=0.0, angle=90, code=3, 
          col = 'black',lwd=3)
   points(log2(Results[i,'mean']),ypos[yindex],pch=18,cex=2)
+  
+  arrows(log2(Results_FM[j,'lowerCI']),ypos[yindex]-eps,
+         log2(Results_FM[j,'upperCI']),ypos[yindex]-eps,
+         length=0.0, angle=90, code=3, 
+         col = 'darkblue',lwd=3)
+  points(log2(Results_FM[j,'mean']),ypos[yindex]-eps,pch=18,cex=2,col='darkblue')
+  
   yindex=yindex+1
   
 }
@@ -983,6 +996,7 @@ axis(side = 2, at = ypos, labels = rownames(Results),tick=FALSE)
 mtext(side=1, line = 2.5, text = 'Adjusted odds ratio')
 mtext(side = 3, line = 1, text = 'Increased survival',adj = 0)
 mtext(side = 3, line = 1, text = 'Decreased survival',adj = 1)
-
+legend('bottomright',legend = c('Asian data','All data'),
+       lwd=3,pch=18,col=c('black','darkblue'),inset = 0.01)
 ```
 
