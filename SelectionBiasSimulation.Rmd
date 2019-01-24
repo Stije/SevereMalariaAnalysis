@@ -53,6 +53,8 @@ We run the model for values of $\pi$ from $\pi=$P_anaemia up to 0.5. This is con
 if(RUN_SIM){
   # The number of malaria patients
   N = 10^6
+  P_coma = 0.34
+  P_anaemia = 0.24
   PIs = seq(P_anaemia, 0.5, length.out = 100)
   ORcoma = ORanaemia = array(dim=length(PIs))
   TrueOR_anaemia = array(dim=length(PIs))
