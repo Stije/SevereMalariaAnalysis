@@ -5,7 +5,7 @@ output:
     fig_caption: yes
     keep_md: yes
     number_sections: yes
-    toc: yes
+    toc: no
 ---
 
 
@@ -13,7 +13,7 @@ output:
 
 ```r
 require(RColorBrewer)
-RUN_SIM = FALSE
+RUN_SIM = T
 ```
 
 # Outline
@@ -49,6 +49,10 @@ We run the model for values of $\pi$ from $\pi=$P_anaemia up to 0.5. This is con
 if(RUN_SIM){
   # The number of malaria patients
   N = 10^6
+  P_coma = 0.34
+  P_anaemia = 0.24
+  P_G6PDdef = 0.15
+  
   PIs = seq(P_anaemia, 0.5, length.out = 100)
   ORcoma = ORanaemia = array(dim=length(PIs))
   TrueOR_anaemia = array(dim=length(PIs))
@@ -124,4 +128,13 @@ The following plot shows how varying the odds ratio for anaemia changes the obse
 
 ![](SelectionBiasSimulation_files/figure-html/ModelSimulation-1.png)<!-- -->
 
+
+```r
+ind = which.min(abs(Results$TrueOR_anaemia-1.48))
+writeLines(sprintf('If we take the reported OR of 1.48 for G6PDd in SMA cases versus controls, then the model estimate for the OR for G6PDd in CM cases versus controls is %s. Clarke et al report 0.82', round(Results$ORcoma[ind],2)))
+```
+
+```
+## If we take the reported OR of 1.48 for G6PDd in SMA cases versus controls, then the model estimate for the OR for G6PDd in CM cases versus controls is 0.86. Clarke et al report 0.82
+```
 

@@ -5,7 +5,7 @@ output:
     fig_caption: yes
     keep_md: yes
     number_sections: yes
-    toc: yes
+    toc: no
 ---
 
 ```{r, echo=F}
@@ -18,7 +18,7 @@ knitr::opts_chunk$set(cache = TRUE, cache.comments = FALSE,
 
 ```{r}
 require(RColorBrewer)
-RUN_SIM = FALSE
+RUN_SIM = T
 ```
 
 # Outline
@@ -55,6 +55,8 @@ if(RUN_SIM){
   N = 10^6
   P_coma = 0.34
   P_anaemia = 0.24
+  P_G6PDdef = 0.15
+  
   PIs = seq(P_anaemia, 0.5, length.out = 100)
   ORcoma = ORanaemia = array(dim=length(PIs))
   TrueOR_anaemia = array(dim=length(PIs))
@@ -129,17 +131,11 @@ if(RUN_SIM){
 The following plot shows how varying the odds ratio for anaemia changes the observed odds ratio for coma:
 
 ```{r ModelSimulation, echo=FALSE, fig.height=8}
-addalpha <- function(colors, alpha=0.5) {
-  r <- col2rgb(colors, alpha=T)
-  # Apply alpha
-  r[4,] <- alpha*255
-  r <- r/255.0
-  return(rgb(r[1,], r[2,], r[3,], r[4,]))
-}
+
 bluecols = brewer.pal(3, 'Blues')
 redcols = brewer.pal(3, 'Reds')
 
-reportcols = brewer.pal(3, 'Accent')
+#reportcols = brewer.pal(3, 'Accent')
 par(las = 1, bty='n', mfrow=c(1,2))
 
 
@@ -153,9 +149,9 @@ mtext(text = 'True odds ratio for G6PDd\nin SMA versus controls',
       side = 1,line = 3.5)
 axis(2, at = c(0.7,.8), labels = c(0.7,''))
 polygon(c(-1,20,20,-1),c(1.22,1.22,1.8,1.8),
-        col=addalpha(bluecols[1]), border = NA)
+        col=adjustcolor(bluecols[1],alpha.f = 0.4), border = NA)
 polygon(c(1.22,1.22,1.8,1.8),c(-1,20,20,-1),
-        col=addalpha(bluecols[1]), border = NA)
+        col=adjustcolor(bluecols[1],alpha.f = 0.4), border = NA)
 abline(h = 1.48, col= bluecols[2], lwd=2, lty=2)
 abline(v = 1.48, col= bluecols[2], lwd=2, lty=2)
 
@@ -180,10 +176,10 @@ mtext(text = 'True odds ratio for G6PDd\nin SMA versus controls',
       side = 1,line = 3.5)
 axis(2, at = c(0.7,.8), labels = c(0.7,''))
 polygon(c(-1,20,20,-1),c(0.69,0.69,0.98,0.98),
-        col=addalpha(redcols[1]), border = NA)
+        col=adjustcolor(redcols[1],alpha.f = 0.4), border = NA)
 
 polygon(c(1.22,1.22,1.8,1.8),c(-1,20,20,-1),
-        col=addalpha(bluecols[1]), border = NA)
+        col=adjustcolor(bluecols[1],alpha.f = 0.4), border = NA)
 abline(h = c(0.82), col= redcols[2], lwd=2, lty=2)
 abline(v = 1.48, col= bluecols[2], lwd=2, lty=2)
 
