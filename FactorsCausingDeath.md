@@ -100,92 +100,92 @@ First we setup these linear models. Random effect terms are added for study and 
 
 ```r
 if(RUN_MODELS){
-K_imputations = 500
-SM_Impute_List = list()
-for (k in 1:K_imputations){
-  Imp_data = m
-  
-  # BD from bicarbonate
-  coefs1 = summary(mod_impute1)$coefficients
-  Imp_data$BD[ind1] = rnorm(n = sum(ind1), 
-                            mean = predict(mod_impute1, newdata = m[ind1,]),
-                            sd = coefs1[1,'Std. Error'] + 
-                              coefs1[2,'Std. Error']*m$bicarbonate[ind1])
-  
-  # BD from lactate
-  coefs2 = summary(mod_impute2)$coefficients
-  Imp_data$BD[ind2] = rnorm(n = sum(ind2), 
-                            mean = predict(mod_impute2, newdata = m[ind2,],allow.new.levels=T),
-                            sd = coefs2[1,'Std. Error'] + 
-                              coefs2[2,'Std. Error']*m$lactate[ind2])
-  
-  # BD from respiratory rate
-  coefs3 = summary(mod_impute3)$coefficients
-  Imp_data$BD[ind3] = rnorm(n = sum(ind3), 
-                            mean = predict(mod_impute3, newdata = m[ind3,],allow.new.levels=T),
-                            sd = coefs3[1,'Std. Error'] + 
-                              coefs3[2,'Std. Error']*m$rr[ind3])
-  
-  # BUN from creatinine
-  coefs4 = summary(mod_impute4)$coefficients
-  Imp_data$BUN[ind4] = exp(rnorm(n = sum(ind4), 
-                                 mean = predict(mod_impute4, newdata = m[ind4,],allow.new.levels=T),
-                                 sd = coefs4[1,'Std. Error'] + 
-                                   coefs4[2,'Std. Error']*m$creatinine[ind4]))
-  
-  # HCT from Age
-  coefs5 = summary(mod_impute5)$coefficients
-  Imp_data$HCT[ind5] = rnorm(n = sum(ind5), 
-                             mean = predict(mod_impute5, newdata = m[ind5,],allow.new.levels=T),
-                             sd = coefs5[1,'Std. Error'] + 
-                               coefs5[2,'Std. Error']*m$AgeInYear[ind5])
-  
-  # BD from age
-  coefs6 = summary(mod_impute6)$coefficients
-  Imp_data$BD[ind6] = rnorm(n = sum(ind6), 
-                            mean = predict(mod_impute6, newdata = m[ind6,],allow.new.levels=T),
-                            sd = coefs6[1,'Std. Error'] + 
-                              coefs6[2,'Std. Error']*m$AgeInYear[ind6])
-  
-  # Coma from hypoglycaemia
-  coefs7 = summary(mod_impute7)$coefficients
-  Imp_data$coma[ind7] = rbinom(n = sum(ind7), size = 1,
-                               predict(mod_impute7, newdata = m[ind7,],
-                                       allow.new.levels=T, type='response'))
-  
-  # Parasitaemia from age
-  coefs8 = summary(mod_impute8)$coefficients
-  Imp_data$LPAR_pct[ind8] = rnorm(n = sum(ind8), 
-                                  mean = predict(mod_impute8, 
-                                                 newdata = m[ind8,],
-                                                 allow.new.levels=T),
-                                  sd = coefs8[1,'Std. Error'] + 
-                                    coefs8[2,'Std. Error']*m$AgeInYear[ind8])
-  
-  # Hypoglycaemia: marginal
-  coefs9 = summary(mod_impute9)$coefficients
-  Imp_data$hypoglycaemia[ind9] = rbinom(n = sum(ind9),size = 1, 
-                                        prob = predict(mod_impute9, 
-                                                       newdata = m[ind9,],
-                                                       allow.new.levels=T,
-                                                       type='response'))
-  
-  # BUN: marginal
-  coefs10 = summary(mod_impute10)$coefficients
-  Imp_data$BUN[ind10] = exp(rnorm(n = sum(ind10), 
-                                  mean = predict(mod_impute10, newdata = m[ind10,],
-                                                 allow.new.levels=T),
-                                  sd = coefs10[1,'Std. Error']))
-  
-  SM_Impute_List[[k]] = Imp_data
-  
-}
-save(SM_Impute_List, file = 'RData/Multiple_Imputed_Datasets.RData')
-# Check the number of remaining missing in the last imputed dataset:
-vars_explanatory = c('HCT','LPAR_pct','coma' ,'convulsions',
-                     'poedema','BUN','BD' ,'shock','hypoglycaemia',
-                     'drug_AS','studyID','country')
-apply(Imp_data[,vars_explanatory], 2, function(x) sum(is.na(x)))
+  K_imputations = 500
+  SM_Impute_List = list()
+  for (k in 1:K_imputations){
+    Imp_data = m
+    
+    # BD from bicarbonate
+    coefs1 = summary(mod_impute1)$coefficients
+    Imp_data$BD[ind1] = rnorm(n = sum(ind1), 
+                              mean = predict(mod_impute1, newdata = m[ind1,]),
+                              sd = coefs1[1,'Std. Error'] + 
+                                coefs1[2,'Std. Error']*m$bicarbonate[ind1])
+    
+    # BD from lactate
+    coefs2 = summary(mod_impute2)$coefficients
+    Imp_data$BD[ind2] = rnorm(n = sum(ind2), 
+                              mean = predict(mod_impute2, newdata = m[ind2,],allow.new.levels=T),
+                              sd = coefs2[1,'Std. Error'] + 
+                                coefs2[2,'Std. Error']*m$lactate[ind2])
+    
+    # BD from respiratory rate
+    coefs3 = summary(mod_impute3)$coefficients
+    Imp_data$BD[ind3] = rnorm(n = sum(ind3), 
+                              mean = predict(mod_impute3, newdata = m[ind3,],allow.new.levels=T),
+                              sd = coefs3[1,'Std. Error'] + 
+                                coefs3[2,'Std. Error']*m$rr[ind3])
+    
+    # BUN from creatinine
+    coefs4 = summary(mod_impute4)$coefficients
+    Imp_data$BUN[ind4] = exp(rnorm(n = sum(ind4), 
+                                   mean = predict(mod_impute4, newdata = m[ind4,],allow.new.levels=T),
+                                   sd = coefs4[1,'Std. Error'] + 
+                                     coefs4[2,'Std. Error']*m$creatinine[ind4]))
+    
+    # HCT from Age
+    coefs5 = summary(mod_impute5)$coefficients
+    Imp_data$HCT[ind5] = rnorm(n = sum(ind5), 
+                               mean = predict(mod_impute5, newdata = m[ind5,],allow.new.levels=T),
+                               sd = coefs5[1,'Std. Error'] + 
+                                 coefs5[2,'Std. Error']*m$AgeInYear[ind5])
+    
+    # BD from age
+    coefs6 = summary(mod_impute6)$coefficients
+    Imp_data$BD[ind6] = rnorm(n = sum(ind6), 
+                              mean = predict(mod_impute6, newdata = m[ind6,],allow.new.levels=T),
+                              sd = coefs6[1,'Std. Error'] + 
+                                coefs6[2,'Std. Error']*m$AgeInYear[ind6])
+    
+    # Coma from hypoglycaemia
+    coefs7 = summary(mod_impute7)$coefficients
+    Imp_data$coma[ind7] = rbinom(n = sum(ind7), size = 1,
+                                 predict(mod_impute7, newdata = m[ind7,],
+                                         allow.new.levels=T, type='response'))
+    
+    # Parasitaemia from age
+    coefs8 = summary(mod_impute8)$coefficients
+    Imp_data$LPAR_pct[ind8] = rnorm(n = sum(ind8), 
+                                    mean = predict(mod_impute8, 
+                                                   newdata = m[ind8,],
+                                                   allow.new.levels=T),
+                                    sd = coefs8[1,'Std. Error'] + 
+                                      coefs8[2,'Std. Error']*m$AgeInYear[ind8])
+    
+    # Hypoglycaemia: marginal
+    coefs9 = summary(mod_impute9)$coefficients
+    Imp_data$hypoglycaemia[ind9] = rbinom(n = sum(ind9),size = 1, 
+                                          prob = predict(mod_impute9, 
+                                                         newdata = m[ind9,],
+                                                         allow.new.levels=T,
+                                                         type='response'))
+    
+    # BUN: marginal
+    coefs10 = summary(mod_impute10)$coefficients
+    Imp_data$BUN[ind10] = exp(rnorm(n = sum(ind10), 
+                                    mean = predict(mod_impute10, newdata = m[ind10,],
+                                                   allow.new.levels=T),
+                                    sd = coefs10[1,'Std. Error']))
+    
+    SM_Impute_List[[k]] = Imp_data
+    
+  }
+  save(SM_Impute_List, file = 'RData/Multiple_Imputed_Datasets.RData')
+  # Check the number of remaining missing in the last imputed dataset:
+  vars_explanatory = c('HCT','LPAR_pct','coma' ,'convulsions',
+                       'poedema','BUN','BD' ,'shock','hypoglycaemia',
+                       'drug_AS','studyID','country')
+  apply(Imp_data[,vars_explanatory], 2, function(x) sum(is.na(x)))
 } else {
   load('RData/Multiple_Imputed_Datasets.RData')
 }
@@ -203,13 +203,6 @@ Compute the overall parameter estimates:
 # extract the fixed and random effects from all the model fits
 # These functions then compute the overall estimates
 FixedEffs = modelFixedEff(modList)
-```
-
-```
-## Warning: package 'bindrcpp' was built under R version 3.4.4
-```
-
-```r
 RandEffs = modelRandEffStats(modList)
 print(FixedEffs)
 ```
@@ -243,7 +236,7 @@ Aggregate results for plotting:
 
 ```r
 writeLines(sprintf('Standard deviation of base deficit in patient population is %s',
-                  round(sd(m$BD,na.rm=T))))
+                   round(sd(m$BD,na.rm=T))))
 ```
 
 ```
@@ -252,7 +245,7 @@ writeLines(sprintf('Standard deviation of base deficit in patient population is 
 
 ```r
 writeLines(sprintf('Standard deviation of blood urea nitrogen in patient population is %s',
-                  round(2^sd(log2(m$BUN),na.rm=T))))
+                   round(2^sd(log2(m$BUN),na.rm=T))))
 ```
 
 ```
@@ -261,7 +254,7 @@ writeLines(sprintf('Standard deviation of blood urea nitrogen in patient populat
 
 ```r
 writeLines(sprintf('Standard deviation of parasitised RBCs in patient population is %s',
-                  round(10^sd(m$LPAR_pct,na.rm=T))))
+                   round(10^sd(m$LPAR_pct,na.rm=T))))
 ```
 
 ```
@@ -270,7 +263,7 @@ writeLines(sprintf('Standard deviation of parasitised RBCs in patient population
 
 ```r
 writeLines(sprintf('Standard deviation of haematocrits in patient population is %s',
-                  round(sd(m$HCT,na.rm=T))))
+                   round(sd(m$HCT,na.rm=T))))
 ```
 
 ```
@@ -360,4 +353,218 @@ mtext(side = 3, line = 1, text = 'Decreased survival',adj = 1)
 ![](FactorsCausingDeath_files/figure-html/ForestPlot_SM-1.png)<!-- -->
 
 
+# Inverse probability weighting for the marginal effect of moderate anaemia
+## Function to compute IPW for specific exposure levels
 
+
+
+# Whole dataset
+
+
+```r
+XX = SM_Impute_List[[15]]
+DAG_fmla = "ModerateAnaemia ~ LPAR_pct + coma + convulsions + AgeInYear +
+                        log2(BUN) + BD + shock + (1 | country) + (1 | studyID)"
+f = ecdf(XX$HCT)
+plot(f)
+```
+
+![](FactorsCausingDeath_files/figure-html/unnamed-chunk-13-1.png)<!-- -->
+
+```r
+# sensitivity over bounds on moderate anaemia
+quantiles_HCT = seq(0, 1, length.out = 20)
+HCT_points = quantile(XX$HCT, probs = quantiles_HCT)
+Bounds = expand.grid(HCT_points,HCT_points)
+Bounds = Bounds[Bounds$Var1 < Bounds$Var2,]
+
+if(RUN_MODELS){
+  out = Hb_intervals_exposureIPW(XX = XX,Bounds = Bounds, DAG_fmla = DAG_fmla)
+  save(out, file = 'results_IPW_Pooled.RData')
+} else {
+  load('results_IPW_Pooled.RData')
+}
+```
+
+
+```r
+produce_ipw_plots(HCT_points = HCT_points,Bounds = Bounds)
+```
+
+![](FactorsCausingDeath_files/figure-html/PooledData_IPW_HB-1.png)<!-- -->![](FactorsCausingDeath_files/figure-html/PooledData_IPW_HB-2.png)<!-- -->![](FactorsCausingDeath_files/figure-html/PooledData_IPW_HB-3.png)<!-- -->![](FactorsCausingDeath_files/figure-html/PooledData_IPW_HB-4.png)<!-- -->
+
+# AQUAMAT
+Looking in the AQUAMAT data:
+
+
+```r
+XX = SM_Impute_List[[12]]
+XX = filter(XX, studyID == 'AQUAMAT')
+DAG_fmla = "ModerateAnaemia ~ LPAR_pct + coma + convulsions + AgeInYear +
+                        log2(BUN) + BD + shock + (1 | country)"
+f = ecdf(XX$HCT)
+plot(f)
+```
+
+![](FactorsCausingDeath_files/figure-html/unnamed-chunk-14-1.png)<!-- -->
+
+```r
+# sensitivity over bounds on moderate anaemia
+quantiles_HCT = seq(0, 1, length.out = 20)
+HCT_points = quantile(XX$HCT, probs = quantiles_HCT)
+Bounds = expand.grid(HCT_points,HCT_points)
+Bounds = Bounds[Bounds$Var1 < Bounds$Var2,]
+
+if(RUN_MODELS){
+  out = Hb_intervals_exposureIPW(XX = XX,Bounds = Bounds, DAG_fmla = DAG_fmla)
+  save(out, file = 'results_IPW_AQUAMAT.RData')
+} else {
+  load('results_IPW_AQUAMAT.RData')
+}
+```
+
+
+
+```r
+produce_ipw_plots(HCT_points = HCT_points,Bounds = Bounds)
+```
+
+![](FactorsCausingDeath_files/figure-html/AQUAMAT_IPW_HB-1.png)<!-- -->![](FactorsCausingDeath_files/figure-html/AQUAMAT_IPW_HB-2.png)<!-- -->![](FactorsCausingDeath_files/figure-html/AQUAMAT_IPW_HB-3.png)<!-- -->![](FactorsCausingDeath_files/figure-html/AQUAMAT_IPW_HB-4.png)<!-- -->
+
+
+
+
+Do the same in adults but only looking at those who die early versus those who do not
+
+```r
+CMAL=readstata13::read.dta13('../../../Datasets/Malaria Core/DBallCore2016_V3.dta')
+```
+
+```
+## Warning in readstata13::read.dta13("../../../Datasets/Malaria Core/DBallCore2016_V3.dta"): 
+##   died:
+##   Factor codes of type double or float detected - no labels assigned.
+##   Set option nonint.factors to TRUE to assign labels anyway.
+```
+
+```
+## Warning in readstata13::read.dta13("../../../Datasets/Malaria Core/DBallCore2016_V3.dta"): 
+##   cerebralCri:
+##   Factor codes of type double or float detected - no labels assigned.
+##   Set option nonint.factors to TRUE to assign labels anyway.
+```
+
+```
+## Warning in readstata13::read.dta13("../../../Datasets/Malaria Core/DBallCore2016_V3.dta"): 
+##   anemiaCri:
+##   Factor codes of type double or float detected - no labels assigned.
+##   Set option nonint.factors to TRUE to assign labels anyway.
+```
+
+```
+## Warning in readstata13::read.dta13("../../../Datasets/Malaria Core/DBallCore2016_V3.dta"): 
+##   renalfailCri:
+##   Factor codes of type double or float detected - no labels assigned.
+##   Set option nonint.factors to TRUE to assign labels anyway.
+```
+
+```
+## Warning in readstata13::read.dta13("../../../Datasets/Malaria Core/DBallCore2016_V3.dta"): 
+##   convulCri:
+##   Factor codes of type double or float detected - no labels assigned.
+##   Set option nonint.factors to TRUE to assign labels anyway.
+```
+
+```
+## Warning in readstata13::read.dta13("../../../Datasets/Malaria Core/DBallCore2016_V3.dta"): 
+##   hyparaCri:
+##   Factor codes of type double or float detected - no labels assigned.
+##   Set option nonint.factors to TRUE to assign labels anyway.
+```
+
+```
+## Warning in readstata13::read.dta13("../../../Datasets/Malaria Core/DBallCore2016_V3.dta"): 
+##   hyglycemiaCri:
+##   Factor codes of type double or float detected - no labels assigned.
+##   Set option nonint.factors to TRUE to assign labels anyway.
+```
+
+```
+## Warning in readstata13::read.dta13("../../../Datasets/Malaria Core/DBallCore2016_V3.dta"): 
+##   systolicbpCri:
+##   Factor codes of type double or float detected - no labels assigned.
+##   Set option nonint.factors to TRUE to assign labels anyway.
+```
+
+```
+## Warning in readstata13::read.dta13("../../../Datasets/Malaria Core/DBallCore2016_V3.dta"): 
+##   pretreat:
+##   Factor codes of type double or float detected - no labels assigned.
+##   Set option nonint.factors to TRUE to assign labels anyway.
+```
+
+```
+## Warning in readstata13::read.dta13("../../../Datasets/Malaria Core/DBallCore2016_V3.dta"): 
+##   pejaund:
+##   Factor codes of type double or float detected - no labels assigned.
+##   Set option nonint.factors to TRUE to assign labels anyway.
+```
+
+```
+## Warning in readstata13::read.dta13("../../../Datasets/Malaria Core/DBallCore2016_V3.dta"): 
+##   cyanosis:
+##   Factor codes of type double or float detected - no labels assigned.
+##   Set option nonint.factors to TRUE to assign labels anyway.
+```
+
+```
+## Warning in readstata13::read.dta13("../../../Datasets/Malaria Core/DBallCore2016_V3.dta"): 
+##   inotropeday:
+##   Missing factor labels - no labels assigned.
+##   Set option generate.factors=T to generate labels.
+```
+
+```r
+CMAL = CMAL[,c('StudyNumber','studyID','Timetodeathhrs')]
+
+XX = SM_Impute_List[[20]]
+XX$Unique_ID = apply(XX, 1, function(x) paste(x['StudyNumber'], x['studyID'],sep='_'))
+CMAL$Unique_ID = apply(CMAL, 1, function(x) paste(x['StudyNumber'], x['studyID'],sep='_'))
+
+
+
+XX = merge(XX, CMAL[,c('Unique_ID','Timetodeathhrs')], by='Unique_ID')
+time_death_NA = is.na(XX$Timetodeathhrs) & XX$outcome==1
+XX = XX[!time_death_NA, ]
+XX$LPAR_pct[is.infinite(XX$LPAR_pct)] = 0
+XX$early_death = as.numeric(XX$outcome==1 & XX$Timetodeathhrs<=24)
+XX = filter(XX, studyID != 'AQUAMAT')
+```
+
+
+
+
+```r
+DAG_fmla = "ModerateAnaemia ~ LPAR_pct + coma + convulsions + AgeInYear +
+                        log2(BUN) + BD + shock + (1 | country) + (1 | studyID)"
+# sensitivity over bounds on moderate anaemia
+f = ecdf(XX$HCT)
+plot(f)
+```
+
+![](FactorsCausingDeath_files/figure-html/unnamed-chunk-16-1.png)<!-- -->
+
+```r
+# sensitivity over bounds on moderate anaemia
+quantiles_HCT = seq(0, 1, length.out = 20)
+HCT_points = quantile(XX$HCT, probs = quantiles_HCT)
+Bounds = expand.grid(HCT_points,HCT_points)
+Bounds = Bounds[Bounds$Var1 < Bounds$Var2,]
+
+if(RUN_MODELS){
+  out = Hb_intervals_exposureIPW(XX = XX,Bounds = Bounds, DAG_fmla = DAG_fmla)
+  save(res, file = 'results_IPW_adults_earlyDeath.RData')
+} else {
+  load('results_IPW_adults_earlyDeath.RData')
+}
+```

@@ -35,6 +35,7 @@ m$coma[is.na(m$coma) & m$studyID=='AQ'] = 0
 library(lme4)
 require(missForest)
 library(merTools)
+library(fields)
 ```
 
 
@@ -136,92 +137,92 @@ ind10 = !ind4 & is.na(m$BUN)
 
 ```{r}
 if(RUN_MODELS){
-K_imputations = 500
-SM_Impute_List = list()
-for (k in 1:K_imputations){
-  Imp_data = m
-  
-  # BD from bicarbonate
-  coefs1 = summary(mod_impute1)$coefficients
-  Imp_data$BD[ind1] = rnorm(n = sum(ind1), 
-                            mean = predict(mod_impute1, newdata = m[ind1,]),
-                            sd = coefs1[1,'Std. Error'] + 
-                              coefs1[2,'Std. Error']*m$bicarbonate[ind1])
-  
-  # BD from lactate
-  coefs2 = summary(mod_impute2)$coefficients
-  Imp_data$BD[ind2] = rnorm(n = sum(ind2), 
-                            mean = predict(mod_impute2, newdata = m[ind2,],allow.new.levels=T),
-                            sd = coefs2[1,'Std. Error'] + 
-                              coefs2[2,'Std. Error']*m$lactate[ind2])
-  
-  # BD from respiratory rate
-  coefs3 = summary(mod_impute3)$coefficients
-  Imp_data$BD[ind3] = rnorm(n = sum(ind3), 
-                            mean = predict(mod_impute3, newdata = m[ind3,],allow.new.levels=T),
-                            sd = coefs3[1,'Std. Error'] + 
-                              coefs3[2,'Std. Error']*m$rr[ind3])
-  
-  # BUN from creatinine
-  coefs4 = summary(mod_impute4)$coefficients
-  Imp_data$BUN[ind4] = exp(rnorm(n = sum(ind4), 
-                                 mean = predict(mod_impute4, newdata = m[ind4,],allow.new.levels=T),
-                                 sd = coefs4[1,'Std. Error'] + 
-                                   coefs4[2,'Std. Error']*m$creatinine[ind4]))
-  
-  # HCT from Age
-  coefs5 = summary(mod_impute5)$coefficients
-  Imp_data$HCT[ind5] = rnorm(n = sum(ind5), 
-                             mean = predict(mod_impute5, newdata = m[ind5,],allow.new.levels=T),
-                             sd = coefs5[1,'Std. Error'] + 
-                               coefs5[2,'Std. Error']*m$AgeInYear[ind5])
-  
-  # BD from age
-  coefs6 = summary(mod_impute6)$coefficients
-  Imp_data$BD[ind6] = rnorm(n = sum(ind6), 
-                            mean = predict(mod_impute6, newdata = m[ind6,],allow.new.levels=T),
-                            sd = coefs6[1,'Std. Error'] + 
-                              coefs6[2,'Std. Error']*m$AgeInYear[ind6])
-  
-  # Coma from hypoglycaemia
-  coefs7 = summary(mod_impute7)$coefficients
-  Imp_data$coma[ind7] = rbinom(n = sum(ind7), size = 1,
-                               predict(mod_impute7, newdata = m[ind7,],
-                                       allow.new.levels=T, type='response'))
-  
-  # Parasitaemia from age
-  coefs8 = summary(mod_impute8)$coefficients
-  Imp_data$LPAR_pct[ind8] = rnorm(n = sum(ind8), 
-                                  mean = predict(mod_impute8, 
-                                                 newdata = m[ind8,],
-                                                 allow.new.levels=T),
-                                  sd = coefs8[1,'Std. Error'] + 
-                                    coefs8[2,'Std. Error']*m$AgeInYear[ind8])
-  
-  # Hypoglycaemia: marginal
-  coefs9 = summary(mod_impute9)$coefficients
-  Imp_data$hypoglycaemia[ind9] = rbinom(n = sum(ind9),size = 1, 
-                                        prob = predict(mod_impute9, 
-                                                       newdata = m[ind9,],
-                                                       allow.new.levels=T,
-                                                       type='response'))
-  
-  # BUN: marginal
-  coefs10 = summary(mod_impute10)$coefficients
-  Imp_data$BUN[ind10] = exp(rnorm(n = sum(ind10), 
-                                  mean = predict(mod_impute10, newdata = m[ind10,],
-                                                 allow.new.levels=T),
-                                  sd = coefs10[1,'Std. Error']))
-  
-  SM_Impute_List[[k]] = Imp_data
-  
-}
-save(SM_Impute_List, file = 'RData/Multiple_Imputed_Datasets.RData')
-# Check the number of remaining missing in the last imputed dataset:
-vars_explanatory = c('HCT','LPAR_pct','coma' ,'convulsions',
-                     'poedema','BUN','BD' ,'shock','hypoglycaemia',
-                     'drug_AS','studyID','country')
-apply(Imp_data[,vars_explanatory], 2, function(x) sum(is.na(x)))
+  K_imputations = 500
+  SM_Impute_List = list()
+  for (k in 1:K_imputations){
+    Imp_data = m
+    
+    # BD from bicarbonate
+    coefs1 = summary(mod_impute1)$coefficients
+    Imp_data$BD[ind1] = rnorm(n = sum(ind1), 
+                              mean = predict(mod_impute1, newdata = m[ind1,]),
+                              sd = coefs1[1,'Std. Error'] + 
+                                coefs1[2,'Std. Error']*m$bicarbonate[ind1])
+    
+    # BD from lactate
+    coefs2 = summary(mod_impute2)$coefficients
+    Imp_data$BD[ind2] = rnorm(n = sum(ind2), 
+                              mean = predict(mod_impute2, newdata = m[ind2,],allow.new.levels=T),
+                              sd = coefs2[1,'Std. Error'] + 
+                                coefs2[2,'Std. Error']*m$lactate[ind2])
+    
+    # BD from respiratory rate
+    coefs3 = summary(mod_impute3)$coefficients
+    Imp_data$BD[ind3] = rnorm(n = sum(ind3), 
+                              mean = predict(mod_impute3, newdata = m[ind3,],allow.new.levels=T),
+                              sd = coefs3[1,'Std. Error'] + 
+                                coefs3[2,'Std. Error']*m$rr[ind3])
+    
+    # BUN from creatinine
+    coefs4 = summary(mod_impute4)$coefficients
+    Imp_data$BUN[ind4] = exp(rnorm(n = sum(ind4), 
+                                   mean = predict(mod_impute4, newdata = m[ind4,],allow.new.levels=T),
+                                   sd = coefs4[1,'Std. Error'] + 
+                                     coefs4[2,'Std. Error']*m$creatinine[ind4]))
+    
+    # HCT from Age
+    coefs5 = summary(mod_impute5)$coefficients
+    Imp_data$HCT[ind5] = rnorm(n = sum(ind5), 
+                               mean = predict(mod_impute5, newdata = m[ind5,],allow.new.levels=T),
+                               sd = coefs5[1,'Std. Error'] + 
+                                 coefs5[2,'Std. Error']*m$AgeInYear[ind5])
+    
+    # BD from age
+    coefs6 = summary(mod_impute6)$coefficients
+    Imp_data$BD[ind6] = rnorm(n = sum(ind6), 
+                              mean = predict(mod_impute6, newdata = m[ind6,],allow.new.levels=T),
+                              sd = coefs6[1,'Std. Error'] + 
+                                coefs6[2,'Std. Error']*m$AgeInYear[ind6])
+    
+    # Coma from hypoglycaemia
+    coefs7 = summary(mod_impute7)$coefficients
+    Imp_data$coma[ind7] = rbinom(n = sum(ind7), size = 1,
+                                 predict(mod_impute7, newdata = m[ind7,],
+                                         allow.new.levels=T, type='response'))
+    
+    # Parasitaemia from age
+    coefs8 = summary(mod_impute8)$coefficients
+    Imp_data$LPAR_pct[ind8] = rnorm(n = sum(ind8), 
+                                    mean = predict(mod_impute8, 
+                                                   newdata = m[ind8,],
+                                                   allow.new.levels=T),
+                                    sd = coefs8[1,'Std. Error'] + 
+                                      coefs8[2,'Std. Error']*m$AgeInYear[ind8])
+    
+    # Hypoglycaemia: marginal
+    coefs9 = summary(mod_impute9)$coefficients
+    Imp_data$hypoglycaemia[ind9] = rbinom(n = sum(ind9),size = 1, 
+                                          prob = predict(mod_impute9, 
+                                                         newdata = m[ind9,],
+                                                         allow.new.levels=T,
+                                                         type='response'))
+    
+    # BUN: marginal
+    coefs10 = summary(mod_impute10)$coefficients
+    Imp_data$BUN[ind10] = exp(rnorm(n = sum(ind10), 
+                                    mean = predict(mod_impute10, newdata = m[ind10,],
+                                                   allow.new.levels=T),
+                                    sd = coefs10[1,'Std. Error']))
+    
+    SM_Impute_List[[k]] = Imp_data
+    
+  }
+  save(SM_Impute_List, file = 'RData/Multiple_Imputed_Datasets.RData')
+  # Check the number of remaining missing in the last imputed dataset:
+  vars_explanatory = c('HCT','LPAR_pct','coma' ,'convulsions',
+                       'poedema','BUN','BD' ,'shock','hypoglycaemia',
+                       'drug_AS','studyID','country')
+  apply(Imp_data[,vars_explanatory], 2, function(x) sum(is.na(x)))
 } else {
   load('RData/Multiple_Imputed_Datasets.RData')
 }
@@ -260,13 +261,13 @@ print(RandEffs)
 Aggregate results for plotting:
 ```{r}
 writeLines(sprintf('Standard deviation of base deficit in patient population is %s',
-                  round(sd(m$BD,na.rm=T))))
+                   round(sd(m$BD,na.rm=T))))
 writeLines(sprintf('Standard deviation of blood urea nitrogen in patient population is %s',
-                  round(2^sd(log2(m$BUN),na.rm=T))))
+                   round(2^sd(log2(m$BUN),na.rm=T))))
 writeLines(sprintf('Standard deviation of parasitised RBCs in patient population is %s',
-                  round(10^sd(m$LPAR_pct,na.rm=T))))
+                   round(10^sd(m$LPAR_pct,na.rm=T))))
 writeLines(sprintf('Standard deviation of haematocrits in patient population is %s',
-                  round(sd(m$HCT,na.rm=T))))
+                   round(sd(m$HCT,na.rm=T))))
 ```
 
 

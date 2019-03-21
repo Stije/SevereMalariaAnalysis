@@ -1,0 +1,229 @@
+---
+title: 'Inverse Probability Weighting: Anaemia'
+author: "James Watson"
+date: "March 20, 2019"
+output: html_document
+---
+
+```{r, echo=F}
+knitr::opts_chunk$set(cache = TRUE, cache.comments = FALSE, 
+                      echo = TRUE, include = TRUE, 
+                      fig.width = 7, fig.height = 7,
+                      fig.pos = 'H', 
+                      dev = 'png', dpi = 300)
+
+RUN_MODELS = F
+library(lme4)
+library(dplyr)
+library(fields)
+```
+
+## Load dataset
+
+```{r}
+load('RData/Multiple_Imputed_Datasets.RData')
+```
+
+
+
+# Inverse probability weighting for the marginal effect of moderate anaemia
+## Function to compute IPW for specific exposure levels
+```{r, echo=FALSE}
+Hb_intervals_exposureIPW = function(XX, Bounds, DAG_fmla){
+  tbar = txtProgressBar(min = 0, max = nrow(Bounds), style = 3)
+  res = ipw_max = signif_diff = array(dim = nrow(Bounds))
+  for(i in 1:nrow(Bounds)){
+    setTxtProgressBar(pb = tbar, value = i)
+    # define the Hb exposure level
+    XX$ModerateAnaemia = ifelse(XX$HCT<Bounds$Var2[i] & XX$HCT >= Bounds$Var1[i],
+                                1, 0)
+    props = table(XX$ModerateAnaemia)/nrow(XX)
+    if(!any(props >.9)){
+      prob_weights = glmer(DAG_fmla, data = XX, family = binomial) 
+      ws = as.array(inv.logit(predict(prob_weights)))
+      ipw_max[i] = max(1/ws)
+      if(max(1/ws) > 500){
+        ws[1/ws > quantile(1/ws,.99)] = NA
+      }
+      XX$ipw = 1/ws
+      mod = glm(outcome ~ ModerateAnaemia, family = quasibinomial,
+                data = XX,weights = ipw)
+      out = summary(mod)$coefficients
+      mu = out['ModerateAnaemia','Estimate']
+      res[i] = exp(mu)
+      signif_diff[i] = out['ModerateAnaemia','Pr(>|t|)']
+    }
+  }
+  out = list(res=res,ipw_max = ipw_max, signif_diff=signif_diff)
+  return(out)
+}
+# transform results into grids for heatmap plotting
+compute_grid_matrices = function(out, HCT_points, Bounds){
+  n = length(HCT_points)
+  res_signif = res_grid = ipw_grid = res_discrete =
+    array(dim = c(n,n))
+  for(i in 1:n){
+    for(j in 1:n){
+      ind = Bounds[,1]==HCT_points[i] & Bounds[,2]==HCT_points[j]
+      if(sum(ind)>0){
+        res_grid[i,j] = out$res[ind]
+        res_signif[i,j] = log(out$signif_diff[ind])
+        res_discrete[i,j] = ifelse(out$signif_diff[ind]<0.05,out$res[ind],1)
+        ipw_grid[i,j] = log10(out$ipw_max[ind])
+      }
+      
+    }
+  }
+  output_grids = list(res_grid=res_grid,
+                      res_signif=res_signif,
+                      ipw_grid=ipw_grid,
+                      res_discrete=res_discrete)
+  return(output_grids)
+}
+# produce plots of output
+produce_ipw_plots = function(HCT_points,Bounds){
+  require(fields)
+  par(cex.axis=.5, mfrow=c(1,2), mar=c(4,4,2,4))
+  grids = compute_grid_matrices(out = out,HCT_points = HCT_points,Bounds = Bounds)
+  # p-values plot
+  image.plot(x=HCT_points,y=HCT_points,z=grids$res_signif, 
+             xlab='Lower bound of HCT',xaxt='n',
+             ylab = 'Upper Bound of HCT',yaxt='n',
+             legend.lab = 'log p value', main='P values (log scale)',
+             xlim=c(4,41), ylim=c(4,41))
+  axis(1, round(HCT_points), las=1)
+  axis(2, round(HCT_points),las=1)
+  
+  image.plot(x=HCT_points,y=HCT_points,z=grids$res_discrete, 
+             xlab='Lower bound of HCT',xaxt='n',
+             ylab = '',yaxt='n', 
+             main = 'Effect size (thresholded at p<0.05)',
+             legend.lab = 'log odds of death', xlim=c(4,41), ylim=c(4,41))
+  axis(1, round(HCT_points), las=1)
+  axis(2, round(HCT_points),las=1)
+  
+  # effect estimates
+  image.plot(x=HCT_points,y=HCT_points,z=grids$res_grid, 
+             xlab='Lower bound of HCT',xaxt='n',
+             ylab = 'Upper Bound of HCT',yaxt='n', 
+             main = 'Effect size',
+             legend.lab = 'log odds of death', xlim=c(4,41), ylim=c(4,41))
+  axis(1, round(HCT_points), las=1)
+  axis(2, round(HCT_points),las=1)
+  
+  
+  
+  image.plot(x=HCT_points,y=HCT_points,z=grids$ipw_grid, 
+             xlab='Lower bound of HCT',xaxt='n',yaxt='n',
+             ylab = '',main='Maximum ipw',
+             legend.lab = 'Max log10 ipw', 
+             xlim=c(4,41), ylim=c(4,41))
+  axis(1, round(HCT_points), las=1)
+  axis(2, round(HCT_points),las=1)
+}
+```
+
+
+# Whole dataset
+
+```{r, include=TRUE}
+XX = SM_Impute_List[[15]]
+DAG_fmla = "ModerateAnaemia ~ LPAR_pct + coma + convulsions + AgeInYear +
+                        log2(BUN) + BD + shock + (1 | country) + (1 | studyID)"
+f = ecdf(XX$HCT)
+plot(f)
+# sensitivity over bounds on moderate anaemia
+quantiles_HCT = seq(0, 1, length.out = 20)
+HCT_points = quantile(XX$HCT, probs = quantiles_HCT)
+Bounds = expand.grid(HCT_points,HCT_points)
+Bounds = Bounds[Bounds$Var1 < Bounds$Var2,]
+
+if(RUN_MODELS){
+  out = Hb_intervals_exposureIPW(XX = XX,Bounds = Bounds, DAG_fmla = DAG_fmla)
+  save(out, file = 'results_IPW_Pooled.RData')
+} else {
+  load('results_IPW_Pooled.RData')
+}
+```
+
+```{r PooledData_IPW_HB, echo=FALSE}
+
+grids = compute_grid_matrices(out = out,HCT_points = HCT_points,Bounds = Bounds)
+View(grids$res_discrete)
+produce_ipw_plots(HCT_points = HCT_points,Bounds = Bounds)
+
+```
+
+
+# AQUAMAT
+Looking in the AQUAMAT data:
+
+```{r, include=TRUE}
+XX = SM_Impute_List[[12]]
+XX = filter(XX, studyID == 'AQUAMAT')
+DAG_fmla = "ModerateAnaemia ~ LPAR_pct + coma + convulsions + AgeInYear +
+                        log2(BUN) + BD + shock + (1 | country)"
+f = ecdf(XX$HCT)
+plot(f)
+# sensitivity over bounds on moderate anaemia
+quantiles_HCT = seq(0, 1, length.out = 20)
+HCT_points = quantile(XX$HCT, probs = quantiles_HCT)
+Bounds = expand.grid(HCT_points,HCT_points)
+Bounds = Bounds[Bounds$Var1 < Bounds$Var2,]
+
+if(RUN_MODELS){
+  out = Hb_intervals_exposureIPW(XX = XX,Bounds = Bounds, DAG_fmla = DAG_fmla)
+  save(out, file = 'results_IPW_AQUAMAT.RData')
+} else {
+  load('results_IPW_AQUAMAT.RData')
+}
+```
+
+
+```{r AQUAMAT_IPW_HB}
+produce_ipw_plots(HCT_points = HCT_points,Bounds = Bounds)
+```
+
+
+
+
+Do the same in adults but only looking at those who die early versus those who do not
+```{r, include=FALSE, echo=FALSE}
+CMAL=readstata13::read.dta13('../../../Datasets/Malaria Core/DBallCore2016_V3.dta')
+CMAL = CMAL[,c('StudyNumber','studyID','Timetodeathhrs')]
+
+XX = SM_Impute_List[[20]]
+XX$Unique_ID = apply(XX, 1, function(x) paste(x['StudyNumber'], x['studyID'],sep='_'))
+CMAL$Unique_ID = apply(CMAL, 1, function(x) paste(x['StudyNumber'], x['studyID'],sep='_'))
+
+
+
+XX = merge(XX, CMAL[,c('Unique_ID','Timetodeathhrs')], by='Unique_ID')
+time_death_NA = is.na(XX$Timetodeathhrs) & XX$outcome==1
+XX = XX[!time_death_NA, ]
+XX$LPAR_pct[is.infinite(XX$LPAR_pct)] = 0
+XX$early_death = as.numeric(XX$outcome==1 & XX$Timetodeathhrs<=24)
+XX = filter(XX, studyID != 'AQUAMAT')
+```
+
+
+
+```{r}
+# DAG_fmla = "ModerateAnaemia ~ LPAR_pct + coma + convulsions + AgeInYear +
+#                         log2(BUN) + BD + shock + (1 | country) + (1 | studyID)"
+# # sensitivity over bounds on moderate anaemia
+# f = ecdf(XX$HCT)
+# plot(f)
+# # sensitivity over bounds on moderate anaemia
+# quantiles_HCT = seq(0, 1, length.out = 20)
+# HCT_points = quantile(XX$HCT, probs = quantiles_HCT)
+# Bounds = expand.grid(HCT_points,HCT_points)
+# Bounds = Bounds[Bounds$Var1 < Bounds$Var2,]
+# 
+# if(RUN_MODELS){
+#   out = Hb_intervals_exposureIPW(XX = XX,Bounds = Bounds, DAG_fmla = DAG_fmla)
+#   save(res, file = 'results_IPW_adults_earlyDeath.RData')
+# } else {
+#   load('results_IPW_adults_earlyDeath.RData')
+# }
+```
