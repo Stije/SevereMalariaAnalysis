@@ -5,17 +5,22 @@ date: "March 20, 2019"
 output: html_document
 ---
 
-```{r, echo=F}
+```{r, echo=F, include=FALSE}
 knitr::opts_chunk$set(cache = TRUE, cache.comments = FALSE, 
-                      echo = TRUE, include = TRUE, 
+                      echo = FALSE, include = TRUE, 
                       fig.width = 7, fig.height = 7,
                       fig.pos = 'H', 
                       dev = 'png', dpi = 300)
 
 RUN_MODELS = F
 library(lme4)
+#library(merTools)
 library(dplyr)
 library(fields)
+library(boot)
+library(mice)
+library(plotrix)
+#library(glmnet)
 ```
 
 ## Load dataset
@@ -28,202 +33,270 @@ load('RData/Multiple_Imputed_Datasets.RData')
 
 # Inverse probability weighting for the marginal effect of moderate anaemia
 ## Function to compute IPW for specific exposure levels
+
+The idea is as follows:
+
+* We define all intervals of HCT [h1,h2], such that at least 10 percent and at most 90 percent of patients have HCTs within [h1,h2]
+* We use IPW to compare outcomes for patients within the interval and outside each interval [h1,h2]
+
+
+
 ```{r, echo=FALSE}
-Hb_intervals_exposureIPW = function(XX, Bounds, DAG_fmla){
-  tbar = txtProgressBar(min = 0, max = nrow(Bounds), style = 3)
-  res = ipw_max = signif_diff = array(dim = nrow(Bounds))
-  for(i in 1:nrow(Bounds)){
-    setTxtProgressBar(pb = tbar, value = i)
-    # define the Hb exposure level
-    XX$ModerateAnaemia = ifelse(XX$HCT<Bounds$Var2[i] & XX$HCT >= Bounds$Var1[i],
-                                1, 0)
-    props = table(XX$ModerateAnaemia)/nrow(XX)
-    if(!any(props >.9)){
-      prob_weights = glmer(DAG_fmla, data = XX, family = binomial) 
-      ws = as.array(inv.logit(predict(prob_weights)))
-      ipw_max[i] = max(1/ws)
-      if(max(1/ws) > 500){
-        ws[1/ws > quantile(1/ws,.99)] = NA
-      }
-      XX$ipw = 1/ws
-      mod = glm(outcome ~ ModerateAnaemia, family = quasibinomial,
-                data = XX,weights = ipw)
-      out = summary(mod)$coefficients
-      mu = out['ModerateAnaemia','Estimate']
-      res[i] = exp(mu)
-      signif_diff[i] = out['ModerateAnaemia','Pr(>|t|)']
-    }
+compute_IPW_weighting = function(SM_Impute_List, 
+                                 LowerLimit_children = 15,
+                                 LowerLimit_adults = 20,
+                                 UpperLimit_children = 25,
+                                 UpperLimit_adults = 30,
+                                 prop_threshold,
+                                 ipw_quantile_cutoff=.95,
+                                 DAG_fmla, age_threshold = 12){
+  
+  # Go through the datasets and compute weights
+  for(k in 1:length(SM_Impute_List)){
+    ind_children = SM_Impute_List[[k]]$AgeInYear < age_threshold
+    SM_Impute_List[[k]]$ModerateAnaemia = NA
+    
+    SM_Impute_List[[k]]$ModerateAnaemia[ind_children] =
+      ifelse(SM_Impute_List[[k]]$HCT[ind_children] <= UpperLimit_children & 
+               SM_Impute_List[[k]]$HCT[ind_children] >= LowerLimit_children,
+             1, NA)
+    SM_Impute_List[[k]]$ModerateAnaemia[ind_children &
+                                          SM_Impute_List[[k]]$HCT > UpperLimit_children] = 0
+    
+    # Adults    
+    ind_adults = SM_Impute_List[[k]]$AgeInYear >= age_threshold
+    SM_Impute_List[[k]]$ModerateAnaemia[ind_adults] =
+      ifelse(SM_Impute_List[[k]]$HCT[ind_adults] <= UpperLimit_adults & 
+               SM_Impute_List[[k]]$HCT[ind_adults] >= LowerLimit_adults,
+             1, NA)
+    SM_Impute_List[[k]]$ModerateAnaemia[ind_adults &
+                                          SM_Impute_List[[k]]$HCT > UpperLimit_adults] = 0
+    
+    
+    complete_ind = !is.na(SM_Impute_List[[k]]$ModerateAnaemia)
+    SM_Impute_List[[k]] = SM_Impute_List[[k]][complete_ind,]
+    
+    # fit the IP weighting model
+    mod = glmer(DAG_fmla, data = SM_Impute_List[[k]], family=binomial)
+    
+    ind_inside = SM_Impute_List[[k]]$ModerateAnaemia == 1
+    SM_Impute_List[[k]]$weights = NA
+    SM_Impute_List[[k]]$weights[ind_inside] = 
+      1/predict(mod,                                          
+                newdata=SM_Impute_List[[k]][ind_inside,],
+                type='response')
+    SM_Impute_List[[k]]$weights[!ind_inside] = 
+      1/(1-predict(mod,
+                   newdata=SM_Impute_List[[k]][!ind_inside,],
+                   type='response'))
+    
+    
+    max_weight = 50
+    SM_Impute_List[[k]]$weights[SM_Impute_List[[k]]$weights > max_weight] = NA
+    
+    
+    print(k)
   }
-  out = list(res=res,ipw_max = ipw_max, signif_diff=signif_diff)
-  return(out)
-}
-# transform results into grids for heatmap plotting
-compute_grid_matrices = function(out, HCT_points, Bounds){
-  n = length(HCT_points)
-  res_signif = res_grid = ipw_grid = res_discrete =
-    array(dim = c(n,n))
-  for(i in 1:n){
-    for(j in 1:n){
-      ind = Bounds[,1]==HCT_points[i] & Bounds[,2]==HCT_points[j]
-      if(sum(ind)>0){
-        res_grid[i,j] = out$res[ind]
-        res_signif[i,j] = log(out$signif_diff[ind])
-        res_discrete[i,j] = ifelse(out$signif_diff[ind]<0.05,out$res[ind],1)
-        ipw_grid[i,j] = log10(out$ipw_max[ind])
-      }
-      
-    }
-  }
-  output_grids = list(res_grid=res_grid,
-                      res_signif=res_signif,
-                      ipw_grid=ipw_grid,
-                      res_discrete=res_discrete)
-  return(output_grids)
-}
-# produce plots of output
-produce_ipw_plots = function(HCT_points,Bounds){
-  require(fields)
-  par(cex.axis=.5, mfrow=c(1,2), mar=c(4,4,2,4))
-  grids = compute_grid_matrices(out = out,HCT_points = HCT_points,Bounds = Bounds)
-  # p-values plot
-  image.plot(x=HCT_points,y=HCT_points,z=grids$res_signif, 
-             xlab='Lower bound of HCT',xaxt='n',
-             ylab = 'Upper Bound of HCT',yaxt='n',
-             legend.lab = 'log p value', main='P values (log scale)',
-             xlim=c(4,41), ylim=c(4,41))
-  axis(1, round(HCT_points), las=1)
-  axis(2, round(HCT_points),las=1)
   
-  image.plot(x=HCT_points,y=HCT_points,z=grids$res_discrete, 
-             xlab='Lower bound of HCT',xaxt='n',
-             ylab = '',yaxt='n', 
-             main = 'Effect size (thresholded at p<0.05)',
-             legend.lab = 'log odds of death', xlim=c(4,41), ylim=c(4,41))
-  axis(1, round(HCT_points), las=1)
-  axis(2, round(HCT_points),las=1)
+  mod_list = lapply(SM_Impute_List, function(x) glm(outcome ~ ModerateAnaemia,
+                                                    data = x,
+                                                    family='quasibinomial',
+                                                    weights = weights))
+  mod_summary = pool(mod_list)
   
-  # effect estimates
-  image.plot(x=HCT_points,y=HCT_points,z=grids$res_grid, 
-             xlab='Lower bound of HCT',xaxt='n',
-             ylab = 'Upper Bound of HCT',yaxt='n', 
-             main = 'Effect size',
-             legend.lab = 'log odds of death', xlim=c(4,41), ylim=c(4,41))
-  axis(1, round(HCT_points), las=1)
-  axis(2, round(HCT_points),las=1)
-  
-  
-  
-  image.plot(x=HCT_points,y=HCT_points,z=grids$ipw_grid, 
-             xlab='Lower bound of HCT',xaxt='n',yaxt='n',
-             ylab = '',main='Maximum ipw',
-             legend.lab = 'Max log10 ipw', 
-             xlim=c(4,41), ylim=c(4,41))
-  axis(1, round(HCT_points), las=1)
-  axis(2, round(HCT_points),las=1)
+  IPW_results = list(SM_Impute_List=SM_Impute_List, 
+                     mod_summary=mod_summary)
+  return(IPW_results)
 }
 ```
 
 
-# Whole dataset
-
-```{r, include=TRUE}
-XX = SM_Impute_List[[15]]
+```{r}
 DAG_fmla = "ModerateAnaemia ~ LPAR_pct + coma + convulsions + AgeInYear +
-                        log2(BUN) + BD + shock + (1 | country) + (1 | studyID)"
-f = ecdf(XX$HCT)
-plot(f)
-# sensitivity over bounds on moderate anaemia
-quantiles_HCT = seq(0, 1, length.out = 20)
-HCT_points = quantile(XX$HCT, probs = quantiles_HCT)
-Bounds = expand.grid(HCT_points,HCT_points)
-Bounds = Bounds[Bounds$Var1 < Bounds$Var2,]
+BD + shock + (1|country) + continent"
 
-if(RUN_MODELS){
-  out = Hb_intervals_exposureIPW(XX = XX,Bounds = Bounds, DAG_fmla = DAG_fmla)
-  save(out, file = 'results_IPW_Pooled.RData')
-} else {
-  load('results_IPW_Pooled.RData')
-}
-```
-
-```{r PooledData_IPW_HB, echo=FALSE}
-
-grids = compute_grid_matrices(out = out,HCT_points = HCT_points,Bounds = Bounds)
-View(grids$res_discrete)
-produce_ipw_plots(HCT_points = HCT_points,Bounds = Bounds)
-
+res_interval_IPW = compute_IPW_weighting(SM_Impute_List = SM_Impute_List[1:10],
+                                         LowerLimit_children = 10,
+                                         LowerLimit_adults = 15,
+                                         UpperLimit_children = 20,
+                                         UpperLimit_adults = 25,
+                                         prop_threshold = .05,
+                                         DAG_fmla = DAG_fmla)
 ```
 
 
-# AQUAMAT
-Looking in the AQUAMAT data:
 
-```{r, include=TRUE}
-XX = SM_Impute_List[[12]]
-XX = filter(XX, studyID == 'AQUAMAT')
-DAG_fmla = "ModerateAnaemia ~ LPAR_pct + coma + convulsions + AgeInYear +
-                        log2(BUN) + BD + shock + (1 | country)"
-f = ecdf(XX$HCT)
-plot(f)
-# sensitivity over bounds on moderate anaemia
-quantiles_HCT = seq(0, 1, length.out = 20)
-HCT_points = quantile(XX$HCT, probs = quantiles_HCT)
-Bounds = expand.grid(HCT_points,HCT_points)
-Bounds = Bounds[Bounds$Var1 < Bounds$Var2,]
+### Inverse probability weighting: Transfusion studies
 
-if(RUN_MODELS){
-  out = Hb_intervals_exposureIPW(XX = XX,Bounds = Bounds, DAG_fmla = DAG_fmla)
-  save(out, file = 'results_IPW_AQUAMAT.RData')
-} else {
-  load('results_IPW_AQUAMAT.RData')
+We stratify by time to death, to remove collider bias.
+Select the patients who survive past 4 hours
+```{r}
+load('RData/Data.RData')
+#### We're just looking at the those who didn't die before 4 hours post admission
+m$Outcome4hours = 0
+m$Outcome4hours[!is.na(m$Timetodeathhrs) & m$Timetodeathhrs < 4] = 1
+# We only look at individuals who survive past 4 hours
+m = filter(m, Outcome4hours==0)
+
+Transfusion_Data = m[m$studyID%in%c('AQUAMAT','AAV','AQ'),]
+round(100*table(Transfusion_Data$transfusion)/nrow(Transfusion_Data),1)
+unique_ids_Transfusion = Transfusion_Data$Unique_ID
+```
+
+```{r}
+load('RData/Multiple_Imputed_Datasets.RData')
+for(i in 1:length(SM_Impute_List)){
+  ind = SM_Impute_List[[i]]$Unique_ID %in% unique_ids_Transfusion
+  SM_Impute_List[[i]] = SM_Impute_List[[i]][ind,]
 }
 ```
 
 
-```{r AQUAMAT_IPW_HB}
-produce_ipw_plots(HCT_points = HCT_points,Bounds = Bounds)
-```
 
-
-
-
-Do the same in adults but only looking at those who die early versus those who do not
-```{r, include=FALSE, echo=FALSE}
-CMAL=readstata13::read.dta13('../../../Datasets/Malaria Core/DBallCore2016_V3.dta')
-CMAL = CMAL[,c('StudyNumber','studyID','Timetodeathhrs')]
-
-XX = SM_Impute_List[[20]]
-XX$Unique_ID = apply(XX, 1, function(x) paste(x['StudyNumber'], x['studyID'],sep='_'))
-CMAL$Unique_ID = apply(CMAL, 1, function(x) paste(x['StudyNumber'], x['studyID'],sep='_'))
-
-
-
-XX = merge(XX, CMAL[,c('Unique_ID','Timetodeathhrs')], by='Unique_ID')
-time_death_NA = is.na(XX$Timetodeathhrs) & XX$outcome==1
-XX = XX[!time_death_NA, ]
-XX$LPAR_pct[is.infinite(XX$LPAR_pct)] = 0
-XX$early_death = as.numeric(XX$outcome==1 & XX$Timetodeathhrs<=24)
-XX = filter(XX, studyID != 'AQUAMAT')
-```
+We used the time-to-death stratified data to fit a propensity score model:
 
 
 
 ```{r}
-# DAG_fmla = "ModerateAnaemia ~ LPAR_pct + coma + convulsions + AgeInYear +
-#                         log2(BUN) + BD + shock + (1 | country) + (1 | studyID)"
-# # sensitivity over bounds on moderate anaemia
-# f = ecdf(XX$HCT)
-# plot(f)
-# # sensitivity over bounds on moderate anaemia
-# quantiles_HCT = seq(0, 1, length.out = 20)
-# HCT_points = quantile(XX$HCT, probs = quantiles_HCT)
-# Bounds = expand.grid(HCT_points,HCT_points)
-# Bounds = Bounds[Bounds$Var1 < Bounds$Var2,]
-# 
-# if(RUN_MODELS){
-#   out = Hb_intervals_exposureIPW(XX = XX,Bounds = Bounds, DAG_fmla = DAG_fmla)
-#   save(res, file = 'results_IPW_adults_earlyDeath.RData')
-# } else {
-#   load('results_IPW_adults_earlyDeath.RData')
-# }
+if(RUN_MODELS){
+  DAG_fmla = "transfusion ~ HCT + coma + convulsions + 
+              log2(BUN) + BD + shock + hypoglycaemia + AgeInYear +
+              (1 | country)"
+  # fit the model to each dataset
+  Modified_Sm_Impute_List = SM_Impute_List
+  for(k in 1:length(Modified_Sm_Impute_List)){
+    
+    mod_weights = glmer(DAG_fmla, data = Modified_Sm_Impute_List[[k]],
+                        family=binomial) 
+    ind_children = Modified_Sm_Impute_List[[k]]$HCT > 15 & Modified_Sm_Impute_List[[k]]$HCT <= 25 & Modified_Sm_Impute_List[[k]]$AgeInYear < 12
+    ind_adults = Modified_Sm_Impute_List[[k]]$HCT > 20 & Modified_Sm_Impute_List[[k]]$HCT <= 30 & Modified_Sm_Impute_List[[k]]$AgeInYear >= 12
+    Modified_Sm_Impute_List[[k]] = Modified_Sm_Impute_List[[k]][ind_children | ind_adults,]
+    
+    transfused = Modified_Sm_Impute_List[[k]]$transfusion==1
+    Modified_Sm_Impute_List[[k]]$weights = NA
+    Modified_Sm_Impute_List[[k]]$weights[transfused] = 1/predict(mod_weights,
+                                                                 newdata=Modified_Sm_Impute_List[[k]][transfused,],
+                                                                 type='response')
+    Modified_Sm_Impute_List[[k]]$weights[!transfused] = 1/(1-predict(mod_weights,
+                                                                     newdata=Modified_Sm_Impute_List[[k]][!transfused,],
+                                                                     type='response'))
+    max_weight = 100#quantile(Modified_Sm_Impute_List[[k]]$weights,probs = .99)
+    Modified_Sm_Impute_List[[k]]$weights[Modified_Sm_Impute_List[[k]]$weights>max_weight]=NA
+    print(k)
+  }
+  save(Modified_Sm_Impute_List, file = 'RData/Imputed_List_Weights.RData')
+  
+} else {
+  load('RData/Imputed_List_Weights.RData')
+}
+
+mod_imputed_all = lapply(Modified_Sm_Impute_List, function(x) {
+  glm(formula = outcome ~ transfusion, 
+      data = x,
+      weights = weights,
+      family = 'quasibinomial')
+} )
+summary_mod = summary(pool(mod_imputed_all))
+
+writeLines(sprintf('The global estimate of the odds ratio for death in transfused versus not is %s (%s-%s)',
+                   round(exp(summary_mod$estimate[2]),2),
+                   round(exp(summary_mod$estimate[2] - 1.96*summary_mod$std.error[2]),2),
+                   round(exp(summary_mod$estimate[2] + 1.96*summary_mod$std.error[2]),2)))
+
+
+mod_imputed_children = lapply(Modified_Sm_Impute_List, function(x){
+  ind_children = x[,'AgeInYear'] < 15
+  glm(formula = outcome ~ transfusion, 
+      data = x[ind_children,],
+      weights = weights,
+      family = 'quasibinomial')
+} )
+summary_mod = summary(pool(mod_imputed_children))
+
+writeLines(sprintf('The estimate in those < 15 years of age of the odds ratio for death in transfused versus not is %s (%s-%s)',
+                   round(exp(summary_mod$estimate[2]),2),
+                   round(exp(summary_mod$estimate[2]-1.96*summary_mod$std.error[2]),2),
+                   round(exp(summary_mod$estimate[2]+1.96*summary_mod$std.error[2]),2)))
+
+
+mod_imputed_adults = lapply(Modified_Sm_Impute_List, function(x){
+  ind_adults = x$AgeInYear >= 15
+  glm(formula = outcome ~ transfusion, 
+      data = x[ind_adults,],
+      weights = weights,
+      family = 'quasibinomial')
+} )
+summary_mod = summary(pool(mod_imputed_adults))
+
+writeLines(sprintf('The estimate in those > 15 years of age of the odds ratio for death in transfused versus not is %s (%s-%s)',
+                   round(exp(summary_mod$estimate[2]),2),
+                   round(exp(summary_mod$estimate[2]-1.96*summary_mod$std.error[2]),2),
+                   round(exp(summary_mod$estimate[2]+1.96*summary_mod$std.error[2]),2)))
+
 ```
+
+
+Plot an example of rewighting:
+```{r Transfusion_IPW}
+par(las=1, mfrow=c(2,2))
+
+k = sample(x = 1:length(Modified_Sm_Impute_List),1)
+
+ind_children =  Modified_Sm_Impute_List[[k]]$AgeInYear < 12
+ind_adults = Modified_Sm_Impute_List[[k]]$AgeInYear >= 12
+
+transfused = Modified_Sm_Impute_List[[k]]$transfusion==1
+
+hist(Modified_Sm_Impute_List[[k]]$HCT[ind_children&transfused],
+     breaks = seq(15,25.5, length.out = 6),
+     col = adjustcolor('red',alpha.f = .3),xaxt='n',
+     main='', xlab='Haematocrit (%)', ylab = 'Number of patients')
+hist(Modified_Sm_Impute_List[[k]]$HCT[ind_children& !transfused],
+     breaks = seq(15,25.5, length.out = 6),
+     add=T,col=adjustcolor('blue',alpha.f = .3))
+legend('topright',bty='n',legend = c('Tranfused','Not transfused'),
+       col = adjustcolor(c('red','blue'),alpha.f = 0.3), lwd=3, cex=.8)
+title('Unweighted data')
+axis(1,at = (15:25))
+
+
+
+hist(Modified_Sm_Impute_List[[k]]$HCT[ind_adults& !transfused],
+     breaks = seq(20,32, length.out = 6),
+     col = adjustcolor('blue',alpha.f = .3),xaxt='n',
+     main='', xlab='Haematocrit (%)', ylab = 'Number of patients')
+hist(Modified_Sm_Impute_List[[k]]$HCT[ind_adults& transfused],
+     breaks = seq(20,32, length.out = 6),
+     add=T,col=adjustcolor('red',alpha.f = .3))
+legend('topright',bty='n',legend = c('Tranfused','Not transfused'),
+       col = adjustcolor(c('red','blue'),alpha.f = 0.3), lwd=3, cex=.8)
+title('Unweighted data')
+axis(1,at = (21:35))
+
+
+
+ind_not_na = !is.na(Modified_Sm_Impute_List[[k]]$weights)
+weighted.hist(x = Modified_Sm_Impute_List[[k]]$HCT[ind_not_na & !transfused & ind_children],
+              w = Modified_Sm_Impute_List[[k]]$weights[ind_not_na& !transfused & ind_children],
+              col=adjustcolor('blue',alpha.f = .3),breaks = seq(15,25.5, length.out = 6),
+              ylab = 'Pseudo number of patients',xaxt='n')
+weighted.hist(x = Modified_Sm_Impute_List[[k]]$HCT[ind_not_na & transfused & ind_children],
+              w = Modified_Sm_Impute_List[[k]]$weights[ind_not_na & transfused & ind_children],
+              col=adjustcolor('red',alpha.f = .3),breaks = seq(15,25.5, length.out = 6),
+              add=T, ylab = '')
+title('Propensity score weighted data')
+
+
+weighted.hist(x = Modified_Sm_Impute_List[[k]]$HCT[ind_not_na & transfused & ind_adults],
+              w = Modified_Sm_Impute_List[[k]]$weights[ind_not_na& transfused & ind_adults],
+              col=adjustcolor('red',alpha.f = .3),breaks = seq(20,32, length.out = 6),
+              ylab = 'Pseudo number of patients',xaxt='n')
+weighted.hist(x = Modified_Sm_Impute_List[[k]]$HCT[ind_not_na & !transfused & ind_adults],
+              w = Modified_Sm_Impute_List[[k]]$weights[ind_not_na & !transfused & ind_adults],
+              col=adjustcolor('blue',alpha.f = .3),breaks = seq(20,32, length.out = 6),
+              add=T, ylab = '')
+title('Propensity score weighted data')
+
+```
+
+

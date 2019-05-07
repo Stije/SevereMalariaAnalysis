@@ -2,8 +2,8 @@
 title: "Charactersing effect of anaemia on mortality in severe malaria"
 output:
   html_document:
-    keep_md: yes
     fig_caption: yes
+    keep_md: yes
 ---
 
 ```{r, echo=F}
@@ -11,7 +11,7 @@ knitr::opts_chunk$set(cache = TRUE, cache.comments = FALSE,
                       echo = TRUE, include = TRUE, 
                       fig.width = 7, fig.height = 7,
                       fig.pos = 'H', 
-                      dev = 'png', dpi = 300)
+                      dev = c('pdf','png'), dpi = 300)
 
 RUN_MODELS = F
 ```
@@ -20,47 +20,66 @@ RUN_MODELS = F
 
 This looks at the severe malaria legacy dataset from MORU
 
-```{r, echo=FALSE}
+```{r, echo=TRUE}
 load('RData/Data.RData')
 m$drug_AS = 0
 m$drug_AS[m$drug_class=='artemisinin']=1
-
-m$coma[is.na(m$coma) & m$studyID=='AQ'] = 0
+m$country = as.factor(as.character(m$country))
+m$poedema[m$continent=='Africa']=NA
 ```
 
 
 
 
-```{r, echo=FALSE, include=FALSE}
+```{r, echo=TRUE, include=FALSE}
 library(lme4)
 require(missForest)
 library(merTools)
 library(fields)
+library(plyr)
+library(dplyr)
 ```
 
 
 
 Data summaries
 ```{r}
-Africa = c('The Gambia','Mozambique','Ghana','Kenya','Nigeria','Tanzania','Uganda','Rwanda','Congo')
-Asia = c('Thailand','Vietnam','Bangladesh','Myanmar','India','Indonesia')
+writeLines(paste('Children less than 12 years:',
+                 sum(m$AgeInYear < 12)))
+writeLines(paste('Adults:',
+                 sum(m$AgeInYear >= 12)))
+
+
 writeLines(paste('Children in Africa:',
-                 sum(m$AgeInYear < 15 & m$country %in% Africa)))
+                 sum(m$AgeInYear < 12 & m$continent == 'Africa')))
 writeLines(paste('Adults in Africa:',
-                 sum(m$AgeInYear >= 15 & m$country %in% Africa)))
+                 sum(m$AgeInYear >= 12 & m$continent== 'Africa')))
 
 writeLines(paste('Children in Asia:',
-                 sum(m$AgeInYear < 15 & m$country %in% Asia)))
+                 sum(m$AgeInYear < 12 & m$continent == 'Asia')))
 writeLines(paste('Adults in Asia:',
-                 sum(m$AgeInYear >= 15 & m$country %in% Asia)))
+                 sum(m$AgeInYear >= 12 & m$continent == 'Asia')))
+writeLines('\nNumber of patients per study:\n')
+table(m$studyID)
 
+writeLines('\nStudies broken down by country:\n')
+
+table(m$country,m$studyID)
+
+
+for(ss in unique(m$studyID)){
+  xx = filter(m, studyID==ss)
+  writeLines(sprintf('\nThe mortality in %s was %s%%', ss, round(mean(xx$outcome)*100)))
+}
 ```
 
 ### Multiple imputation using linear relationships
 
 The number of missing variables in the pooled data:
 ```{r}
-apply(m,2, function(x) sum(is.na(x)))
+round(apply(m,2, function(x) sum(is.na(x))),0)
+
+round(apply(m,2, function(x) 100*sum(is.na(x)))/nrow(m),0)
 ```
 
 We make a few data adjustments for the model imputation and fitting:
@@ -68,22 +87,39 @@ We make a few data adjustments for the model imputation and fitting:
 m$LPAR_pct[is.infinite(m$LPAR_pct)] = 0
 ```
 
-We run the multiple imputation using sequential linear models.
+We run the multiple imputation using chained equations.
+
+Imputation models V2
+```{r}
+
+```
 
 First we setup these linear models. Random effect terms are added for study and country.
 
 ```{r, include=FALSE}
+# Pulmonary Oedema from rr
+Poedema_rr = !is.na(m$poedema) & !is.na(m$rr)
+mod_impute0 = glmer(poedema ~ rr + (1 | studyID), 
+                   data= m[Poedema_rr,], family = 'binomial')
+ind0 = is.na(m$poedema) & !is.na(m$rr)
+
+# Pulmonary Oedema : marginal
+Poedema_rr2 = !is.na(m$poedema)
+mod_impute0b = glmer(poedema ~ (1 | studyID), 
+                   data= m[Poedema_rr2,], family = 'binomial')
+ind0b = is.na(m$poedema) & is.na(m$rr)
+
 # Base deficit from bicarbonate
 BD_and_bicarbonate = !is.na(m$BD) & !is.na(m$bicarbonate)
-mod_impute1 = lmer(BD ~ bicarbonate + (1 | studyID) + (1 | country), 
+mod_impute1 = lmer(BD ~ bicarbonate + (1 | studyID) , 
                    data= m[BD_and_bicarbonate,])
 # Base deficit and lactate
 BD_and_lactate = !is.na(m$BD) & !is.na(m$lactate)
-mod_impute2 = lmer(BD ~ lactate + (1 | country), 
+mod_impute2 = lm(BD ~ lactate, 
                    data= m[BD_and_lactate,])
 # Base deficit and rr
 BD_and_rr = !is.na(m$BD) & !is.na(m$rr)
-mod_impute3 = lmer(BD ~ rr + (1 | studyID) + (1 | country), 
+mod_impute3 = lmer(BD ~ rr + (1 | studyID), 
                    data= m[BD_and_rr,])
 
 ind1 = is.na(m$BD) & !is.na(m$bicarbonate)
@@ -110,10 +146,16 @@ ind6 = !ind1 & !ind2 & !ind3 & is.na(m$BD)
 
 # marginal distribution of coma 
 Coma_alone = !is.na(m$coma)
-mod_impute7 = glmer(coma ~ AgeInYear + hypoglycaemia + (1 | studyID) + (1 | country),
+mod_impute7 = glmer(coma ~ AgeInYear + hypoglycaemia + (1 | studyID),
                     family = 'binomial',
                     data = m[Coma_alone,])
-ind7 = is.na(m$coma)
+ind7 = is.na(m$coma) & !is.na(m$hypoglycaemia)
+
+# marginal distribution of coma 
+mod_impute7b = glmer(coma ~ AgeInYear + (1 | studyID),
+                     family = 'binomial',
+                     data = m[Coma_alone,])
+ind7b = is.na(m$coma) & is.na(m$hypoglycaemia)
 
 # marginal distribution of LPAR_pct 
 LPAR_pct_alone = !is.na(m$LPAR_pct)
@@ -135,12 +177,22 @@ ind10 = !ind4 & is.na(m$BUN)
 ```
 
 
-```{r}
+```{r, include=FALSE}
 if(RUN_MODELS){
-  K_imputations = 500
+  K_imputations = 100
   SM_Impute_List = list()
   for (k in 1:K_imputations){
     Imp_data = m
+    # Poedema from rr
+    coefs1 = summary(mod_impute0)$coefficients
+    Imp_data$poedema[ind0] = rbinom(n = sum(ind0), size = 1,
+                                  predict(mod_impute0, newdata = m[ind0,],
+                                          allow.new.levels=T, type='response'))
+    # Poedema marginal
+    coefs1 = summary(mod_impute0b)$coefficients
+    Imp_data$poedema[ind0b] = rbinom(n = sum(ind0b), size = 1,
+                                  predict(mod_impute0b, newdata = m[ind0b,],
+                                          allow.new.levels=T, type='response'))
     
     # BD from bicarbonate
     coefs1 = summary(mod_impute1)$coefficients
@@ -152,35 +204,44 @@ if(RUN_MODELS){
     # BD from lactate
     coefs2 = summary(mod_impute2)$coefficients
     Imp_data$BD[ind2] = rnorm(n = sum(ind2), 
-                              mean = predict(mod_impute2, newdata = m[ind2,],allow.new.levels=T),
+                              mean = predict(mod_impute2, 
+                                             newdata = m[ind2,],
+                                             allow.new.levels=T),
                               sd = coefs2[1,'Std. Error'] + 
                                 coefs2[2,'Std. Error']*m$lactate[ind2])
     
     # BD from respiratory rate
     coefs3 = summary(mod_impute3)$coefficients
     Imp_data$BD[ind3] = rnorm(n = sum(ind3), 
-                              mean = predict(mod_impute3, newdata = m[ind3,],allow.new.levels=T),
+                              mean = predict(mod_impute3, 
+                                             newdata = m[ind3,],allow.new.levels=T),
                               sd = coefs3[1,'Std. Error'] + 
                                 coefs3[2,'Std. Error']*m$rr[ind3])
     
     # BUN from creatinine
     coefs4 = summary(mod_impute4)$coefficients
     Imp_data$BUN[ind4] = exp(rnorm(n = sum(ind4), 
-                                   mean = predict(mod_impute4, newdata = m[ind4,],allow.new.levels=T),
+                                   mean = predict(mod_impute4, 
+                                                  newdata = m[ind4,],
+                                                  allow.new.levels=T),
                                    sd = coefs4[1,'Std. Error'] + 
                                      coefs4[2,'Std. Error']*m$creatinine[ind4]))
     
     # HCT from Age
     coefs5 = summary(mod_impute5)$coefficients
     Imp_data$HCT[ind5] = rnorm(n = sum(ind5), 
-                               mean = predict(mod_impute5, newdata = m[ind5,],allow.new.levels=T),
+                               mean = predict(mod_impute5, 
+                                              newdata = m[ind5,],
+                                              allow.new.levels=T),
                                sd = coefs5[1,'Std. Error'] + 
                                  coefs5[2,'Std. Error']*m$AgeInYear[ind5])
     
     # BD from age
     coefs6 = summary(mod_impute6)$coefficients
     Imp_data$BD[ind6] = rnorm(n = sum(ind6), 
-                              mean = predict(mod_impute6, newdata = m[ind6,],allow.new.levels=T),
+                              mean = predict(mod_impute6, 
+                                             newdata = m[ind6,],
+                                             allow.new.levels=T),
                               sd = coefs6[1,'Std. Error'] + 
                                 coefs6[2,'Std. Error']*m$AgeInYear[ind6])
     
@@ -189,6 +250,12 @@ if(RUN_MODELS){
     Imp_data$coma[ind7] = rbinom(n = sum(ind7), size = 1,
                                  predict(mod_impute7, newdata = m[ind7,],
                                          allow.new.levels=T, type='response'))
+    
+    # Coma from age
+    coefs7b = summary(mod_impute7b)$coefficients
+    Imp_data$coma[ind7b] = rbinom(n = sum(ind7b), size = 1,
+                                  predict(mod_impute7b, newdata = m[ind7b,],
+                                          allow.new.levels=T, type='response'))
     
     # Parasitaemia from age
     coefs8 = summary(mod_impute8)$coefficients
@@ -215,7 +282,7 @@ if(RUN_MODELS){
                                     sd = coefs10[1,'Std. Error']))
     
     SM_Impute_List[[k]] = Imp_data
-    
+    print(k)
   }
   save(SM_Impute_List, file = 'RData/Multiple_Imputed_Datasets.RData')
   # Check the number of remaining missing in the last imputed dataset:
@@ -237,7 +304,7 @@ if(RUN_MODELS){
   # the model formula
   DAG_fmla = "outcome ~ HCT + LPAR_pct + coma + convulsions + poedema + 
                         log2(BUN) + BD + shock + hypoglycaemia + 
-                        drug_AS + (1 | studyID) + (1 | country)"
+                        drug_AS + (1 | continent/country)"
   # fit the model to each dataset
   modList= glmerModList(DAG_fmla, data = SM_Impute_List,
                         family=binomial,parallel = T) 
@@ -256,6 +323,31 @@ FixedEffs = modelFixedEff(modList)
 RandEffs = modelRandEffStats(modList)
 print(FixedEffs)
 print(RandEffs)
+
+
+FixedEffs$Scalar_f = as.numeric(mapvalues(x = FixedEffs$term, 
+                                          from = c("(Intercept)",
+                                                   "BD",
+                                                   "coma",
+                                                   "convulsions1",
+                                                   "drug_AS",
+                                                   "HCT",
+                                                   "hypoglycaemia",
+                                                   "log2(BUN)",
+                                                   "LPAR_pct",
+                                                   "shock1",
+                                                   "poedema1"),
+                                          to = as.numeric(c(1, 7, 1, 1, 1, 10, 1,2,log10(6),1, 1))))
+FixedEffs$std.error=as.numeric(FixedEffs$std.error)
+FixedEffs$estimate=as.numeric(FixedEffs$estimate)
+
+# Compute 95% CIs
+Results = data.frame(lowerCI = exp(FixedEffs$Scalar_f*(FixedEffs$estimate -
+                                                         1.96*FixedEffs$std.error)),
+                     mean = exp(FixedEffs$Scalar_f*(FixedEffs$estimate)),
+                     upperCI = exp(FixedEffs$Scalar_f*(FixedEffs$estimate +
+                                                         1.96*FixedEffs$std.error)))
+rownames(Results) = FixedEffs$term
 ```
 
 Aggregate results for plotting:
@@ -271,42 +363,36 @@ writeLines(sprintf('Standard deviation of haematocrits in patient population is 
 ```
 
 
-```{r}
-# The scalar multiples to put the AORs on the correct scales
-Scalar_f = c(1, 7, 1, 1, 1, 10, 1, 1, log10(6), 1, 1)
-# Compute 95% CIs
-Results = data.frame(lowerCI = exp(Scalar_f*(FixedEffs$estimate -
-                                               1.96*FixedEffs$std.error)),
-                     mean = exp(Scalar_f*(FixedEffs$estimate)),
-                     upperCI = exp(Scalar_f*(FixedEffs$estimate +
-                                               1.96*FixedEffs$std.error)))
-rownames(Results) = FixedEffs$term
-```
 
 Make the 'forest' plot:
 ```{r ForestPlot_SM}
-plotting_ind = rownames(Results) %in% c('BD','coma','convulsions1','drug_AS','HCT',
-                                        'log2(BUN)','poedema1','LPAR_pct','shock1')
-Results['HCT',] = 1/Results['HCT',]
-Results = Results[plotting_ind,]
-x_ind = sort.int(Results$mean, index.return = T)$ix
-Results = Results[x_ind,]
-print(round(Results,2))
+Results = Results[rownames(Results) %in% c('BD','coma','convulsions1','drug_AS','HCT',
+                                           'log2(BUN)','poedema1','LPAR_pct','shock1'),]
+Results$Names =mapvalues(rownames(Results),
+                         from = c("drug_AS",
+                                  "HCT",
+                                  "LPAR_pct",
+                                  "convulsions1",
+                                  "shock1",
+                                  "poedema1",
+                                  "log2(BUN)",
+                                  "BD", 
+                                  "coma"),
+                         to = c('Artemisinin drug\nversus\nnon Artemisinin drug',
+                                '-10 % points\nabsolute haematocrit\non admission',
+                                'Six fold increase\n in parasitised\nred blood cells',
+                                'Seizures\non admission',
+                                'Shock\non admission',
+                                'Pulmonary\noedema\non admission',
+                                'Two fold increase\nin blood urea\nnitrogen (mmol/L)',
+                                '+7 mEq/L\nbase deficit',
+                                'Coma\non admission'))
+Results['HCT',c("lowerCI","mean","upperCI")] = 1/Results['HCT',c("lowerCI","mean","upperCI")]
+Results = arrange(Results, mean)
+print(round(Results[,c("lowerCI","mean","upperCI")],2))
 
 par(bty='n', las=1, mar = c(4,9,2,2))
 
-Y_Labels = c('Artemisinin derivative\nversus quinine',
-             '-10 % points\nabsolute haematocrit\non admission',
-             'Six fold increase\n in parasitised\nred blood cells',
-             'Seizures\non admission',
-             'Shock\non admission',
-             'Two fold increase\nin blood urea\nnitrogen (mmol/L)',
-             'Pulmonary\noedema\non admission',
-             '+7 mEq/L\nbase deficit',
-             'Coma\non admission')
-Results_FM = Results
-rownames(Results_FM) = Y_Labels
-save(Results_FM, file = 'Results_fullmodel.RData')
 xlims = c(0.5, 4.5)
 plot(NA,NA, xlim= log2(xlims), ylim = c(0,1),xaxt='n',
      xlab='', ylab='', yaxt='n')
@@ -314,7 +400,7 @@ abline(v= seq(-1,3,by=1),col = "lightgray", lty = "dotted",lwd = par("lwd"))
 axis(1, at = log2(c(0.5,1, 2,4)), labels = c(0.5,1, 2,4))
 abline(v=0, lty=2, lwd=3, col='red')
 yindex =1
-ypos = seq(0,1,length.out = sum(plotting_ind))
+ypos = seq(0,1,length.out = nrow(Results))
 
 
 for(i in 1:nrow(Results)){
@@ -327,11 +413,233 @@ for(i in 1:nrow(Results)){
   
 }
 abline(h=ypos, lty=3)
-axis(side = 2, at = ypos, labels = Y_Labels,tick=FALSE)
+axis(side = 2, at = ypos, labels = Results$Names,tick=FALSE)
 mtext(side=1, line = 2.5, text = 'Adjusted odds ratio')
 mtext(side = 3, line = 1, text = 'Increased survival',adj = 0)
 mtext(side = 3, line = 1, text = 'Decreased survival',adj = 1)
 ```
 
 
+# Logistic regression model with subsets of the data
+
+### Only Asian patients
+
+This provides a sensitivity analysis regarding confounding by sepsis.
+
+```{r}
+SM_Impute_List_Asia = list()
+for (i in 1:length(SM_Impute_List)){
+  SM_Impute_List_Asia[[i]] = filter(SM_Impute_List[[i]], continent == 'Asia')
+}
+```
+
+We fit the full model with adjustments as specified in the Methods section:
+```{r deathmodel_glm_Asia, include=FALSE, echo=TRUE}
+if(RUN_MODELS){
+  # the model formula
+  DAG_fmla = "outcome ~ HCT + LPAR_pct + coma + convulsions + poedema + 
+                      log2(BUN) + BD + shock + hypoglycaemia + 
+                      drug_AS + (1 | country)"
+  # fit the model to each dataset
+  modList = glmerModList(DAG_fmla, data = SM_Impute_List_Asia,
+                         family=binomial,parallel = T) 
+  # save the output
+  save(modList, file = 'RData/ModelList_Asia.RData')
+} else {
+  load('RData/ModelList_Asia.RData')
+}
+
+FixedEffs_Asia = modelFixedEff(modList)
+print(FixedEffs_Asia)
+
+FixedEffs_Asia$Scalar_f = as.numeric(mapvalues(x = FixedEffs_Asia$term, 
+                                               from = c("(Intercept)",
+                                                        "BD",
+                                                        "coma",
+                                                        "convulsions1",
+                                                        "drug_AS",
+                                                        "HCT",
+                                                        "hypoglycaemia",
+                                                        "log2(BUN)",
+                                                        "LPAR_pct",
+                                                        "shock1",
+                                                        "poedema1"),
+                                               to = as.numeric(c(1, 7, 1, 1, 1, 10, 1,2,log10(6),1, 1))))
+FixedEffs_Asia$std.error=as.numeric(FixedEffs_Asia$std.error)
+FixedEffs_Asia$estimate=as.numeric(FixedEffs_Asia$estimate)
+
+# Compute 95% CIs
+Results_Asia = data.frame(lowerCI = exp(FixedEffs_Asia$Scalar_f*(FixedEffs_Asia$estimate -
+                                                                   1.96*FixedEffs_Asia$std.error)),
+                          mean = exp(FixedEffs_Asia$Scalar_f*(FixedEffs_Asia$estimate)),
+                          upperCI = exp(FixedEffs_Asia$Scalar_f*(FixedEffs_Asia$estimate +
+                                                                   1.96*FixedEffs_Asia$std.error)))
+rownames(Results_Asia) = FixedEffs_Asia$term
+```
+
+
+### Only African patients
+
+
+```{r}
+SM_Impute_List_Africa = list()
+for (i in 1:length(SM_Impute_List)){
+  SM_Impute_List_Africa[[i]] = filter(SM_Impute_List[[i]], continent == 'Africa')#s,HCT>9)
+}
+```
+
+We fit the full model with adjustments as specified in the Methods section:
+```{r deathmodel_glm_Africa, include=FALSE, echo=TRUE}
+if(RUN_MODELS){
+  # the model formula
+  DAG_fmla = "outcome ~ HCT + LPAR_pct + coma + convulsions + poedema +
+                      log2(BUN) + BD + shock + hypoglycaemia + 
+                      drug_AS + (1 | country)"
+  # fit the model to each dataset
+  modList = glmerModList(DAG_fmla, data = SM_Impute_List_Africa,
+                         family=binomial,parallel = T) 
+  # save the output
+  save(modList, file = 'RData/ModelList_Africa.RData')
+} else {
+  load('RData/ModelList_Africa.RData')
+}
+
+FixedEffs_Africa = modelFixedEff(modList)
+print(FixedEffs_Africa)
+# Compute the overall parameter estimates:
+# The scalar multiples to put the ORs on the correct scales
+FixedEffs_Africa$Scalar_f = as.numeric(mapvalues(x = FixedEffs_Africa$term, 
+                                                 from = c("(Intercept)",
+                                                          "BD",
+                                                          "coma",
+                                                          "convulsions1",
+                                                          "drug_AS",
+                                                          "HCT",
+                                                          "hypoglycaemia",
+                                                          "log2(BUN)",
+                                                          "LPAR_pct",
+                                                          "shock1",
+                                                          "poedema1"),
+                                                 to = as.numeric(c(1, 7, 1, 1, 1, 10, 1,2,log10(6),1, 1))))
+FixedEffs_Africa$std.error=as.numeric(FixedEffs_Africa$std.error)
+FixedEffs_Africa$estimate=as.numeric(FixedEffs_Africa$estimate)
+
+# Compute 95% CIs
+Results_Africa = data.frame(lowerCI = exp(FixedEffs_Africa$Scalar_f*(FixedEffs_Africa$estimate -
+                                                                       1.96*FixedEffs_Africa$std.error)),
+                            mean = exp(FixedEffs_Africa$Scalar_f*(FixedEffs_Africa$estimate)),
+                            upperCI = exp(FixedEffs_Africa$Scalar_f*(FixedEffs_Africa$estimate +
+                                                                       1.96*FixedEffs_Africa$std.error)))
+rownames(Results_Africa) = FixedEffs_Africa$term
+
+```
+
+
+
+### Plot in comparison the global estimate
+
+
+```{r}
+Results_Africa = Results_Africa[rownames(Results_Africa) %in% c('BD','coma','convulsions1',
+                                                                'drug_AS','HCT',
+                                                                'log2(BUN)','poedema1',
+                                                                'LPAR_pct','shock1'),]
+Results_Africa$Names =mapvalues(rownames(Results_Africa),
+                                from = c("drug_AS",
+                                         "HCT",
+                                         "LPAR_pct",
+                                         "convulsions1",
+                                         "shock1",
+                                         "poedema1",
+                                         "log2(BUN)",
+                                         "BD", 
+                                         "coma"),
+                                to = c('Artemisinin drug\nversus\nnon Artemisinin drug',
+                                       '-10 % points\nabsolute haematocrit\non admission',
+                                       'Six fold increase\n in parasitised\nred blood cells',
+                                       'Seizures\non admission',
+                                       'Shock\non admission',
+                                       'Pulmonary\noedema\non admission',
+                                       'Two fold increase\nin blood urea\nnitrogen (mmol/L)',
+                                       '+7 mEq/L\nbase deficit',
+                                       'Coma\non admission'))
+Results_Africa['HCT',c("lowerCI","mean","upperCI")] = 1/Results_Africa['HCT',c("lowerCI","mean","upperCI")]
+
+
+Results_Asia = Results_Asia[rownames(Results_Asia) %in% c('BD','coma','convulsions1',
+                                                          'drug_AS','HCT',
+                                                          'log2(BUN)','poedema1',
+                                                          'LPAR_pct','shock1'),]
+Results_Asia$Names =mapvalues(rownames(Results_Asia),
+                              from = c("drug_AS",
+                                       "HCT",
+                                       "LPAR_pct",
+                                       "convulsions1",
+                                       "shock1",
+                                       "poedema1",
+                                       "log2(BUN)",
+                                       "BD", 
+                                       "coma"),
+                              to = c('Artemisinin drug\nversus\nnon Artemisinin drug',
+                                     '-10 % points\nabsolute haematocrit\non admission',
+                                     'Six fold increase\n in parasitised\nred blood cells',
+                                     'Seizures\non admission',
+                                     'Shock\non admission',
+                                     'Pulmonary\noedema\non admission',
+                                     'Two fold increase\nin blood urea\nnitrogen (mmol/L)',
+                                     '+7 mEq/L\nbase deficit',
+                                     'Coma\non admission'))
+Results_Asia['HCT',c("lowerCI","mean","upperCI")] = 1/Results_Asia['HCT',c("lowerCI","mean","upperCI")]
+```
+
+
+```{r Results_Comparison}
+par(bty='n', las=1, mar = c(4,9,2,2))
+epsilon = 0.2 * (1/(nrow(Results)-1))
+
+xlims = c(0.45, 5.5)
+plot(NA,NA, xlim= log2(xlims), ylim = c(-2*epsilon,1),xaxt='n',
+     xlab='', ylab='', yaxt='n')
+abline(v= seq(-1,3,by=1),col = "lightgray", lty = "dotted",lwd = par("lwd"))
+axis(1, at = log2(c(0.5,1, 2,4)), labels = c(0.5,1, 2,4))
+abline(v=0, lty=2, lwd=3, col='red')
+yindex =1
+ypos = seq(0,1,length.out = nrow(Results))
+
+for(i in 1:nrow(Results)){
+  arrows(log2(Results[i,'lowerCI']),ypos[yindex],
+         log2(Results[i,'upperCI']),ypos[yindex],
+         length=0.0, angle=90, code=3, 
+         col = 'black',lwd=2)
+  points(log2(Results[i,'mean']),ypos[yindex],pch=18,cex=1)
+  
+  ind1 = Results_Africa$Names == Results$Names[i]
+  ind2 = Results_Asia$Names == Results$Names[i]
+  col1 = adjustcolor('blue',alpha.f = .7)
+  
+  arrows(log2(Results_Africa[ind1,'lowerCI']),ypos[yindex]-epsilon,
+         log2(Results_Africa[ind1,'upperCI']),ypos[yindex]-epsilon,
+         length=0.0, angle=90, code=3, 
+         col = col1,lwd=3)
+  points(log2(Results_Africa[ind1,'mean']),ypos[yindex]-epsilon,pch=18,cex=2,col=col1)
+  
+  col2 = adjustcolor('green',alpha.f = .7)
+  arrows(log2(Results_Asia[ind2,'lowerCI']),ypos[yindex]+epsilon,
+         log2(Results_Asia[ind2,'upperCI']),ypos[yindex]+epsilon,
+         length=0.0, angle=90, code=3, 
+         col = col2,lwd=3)
+  points(log2(Results_Asia[ind2,'mean']),ypos[yindex]+epsilon,pch=18,cex=2,col=col2)
+  
+  yindex=yindex+1
+  
+  
+}
+abline(h=ypos, lty=3)
+axis(side = 2, at = ypos, labels = Results$Names,tick=FALSE)
+mtext(side=1, line = 2.5, text = 'Adjusted odds ratio')
+mtext(side = 3, line = 1, text = 'Increased survival',adj = 0)
+mtext(side = 3, line = 1, text = 'Decreased survival',adj = 1)
+legend('bottomright', col = c('black','blue','green'), 
+       legend = c('All data','African data','Asian data'),lwd=3, inset = 0.02)
+```
 
