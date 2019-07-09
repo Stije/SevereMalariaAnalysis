@@ -10,8 +10,7 @@ library(readstata13)
 library(haven)
 require(plyr)
 require(dplyr)
-dataset = read_dta('~/Dropbox/Datasets/Malaria Core/DBallCore2016_V5.dta')
-#dataset <- read.dta13("DBallCore2016_V2_nospec_200718.dta", convert.dates = TRUE, convert.factors = TRUE,  missing.type = FALSE, convert.underscore = FALSE)
+dataset = read_dta('../../../../Datasets/Malaria Core/DBallCore2016_V5.dta')
 
 #Studies
 table(dataset$studyID,useNA = 'ifany')
@@ -74,11 +73,15 @@ dataset$outcome[dataset$died=="No"] = 0
 table(dataset$outcome, useNA = 'ifany')/nrow(dataset)
 
 ## Hct 
+AQM=filter(dataset, studyID=='AQUAMAT')
+hist(AQM$lbihct,breaks = 0:50)
+View(AQM[!is.na(AQM$lbihct) & AQM$lbihct==8,c('Hbx_iSTAT', 'lbihct')])
 dataset$HCT = dataset$lbhct
 dataset$HCT[is.na(dataset$lbhct)] = dataset$hctadm[is.na(dataset$lbhct)]
 dataset$HCT[is.na(dataset$lbhct) & is.na(dataset$hctadm) ] = dataset$lbihct[is.na(dataset$lbhct) & is.na(dataset$hctadm) ] 
 dataset$HCT = as.numeric(as.character(dataset$HCT))
-hist(dataset$HCT)
+hist(dataset$HCT, breaks = 0:66)
+hist(AQM$HCT, breaks = 0:66)
 
 # parasitaemia/ul
 dataset$paraul = as.numeric(as.character(dataset$paraul))

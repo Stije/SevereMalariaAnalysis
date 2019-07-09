@@ -228,6 +228,14 @@ Compute the overall parameter estimates:
 # extract the fixed and random effects from all the model fits
 # These functions then compute the overall estimates
 FixedEffs = modelFixedEff(modList)
+```
+
+```
+## Warning in modelFixedEff(modList): Between imputation variance is very
+## small, are imputation sets too similar?
+```
+
+```r
 RandEffs = modelRandEffStats(modList)
 print(FixedEffs)
 ```
@@ -491,6 +499,7 @@ Results_Asia['HCT',c("lowerCI","mean","upperCI")] = 1/Results_Asia['HCT',c("lowe
 
 
 ```r
+library(RColorBrewer)
 par(bty='n', las=1, mar = c(4,9,2,2))
 epsilon = 0.2 * (1/(nrow(Results)-1))
 
@@ -502,7 +511,10 @@ axis(1, at = log2(c(0.5,1, 2,4)), labels = c(0.5,1, 2,4))
 abline(v=0, lty=2, lwd=3, col='red')
 yindex =1
 ypos = seq(0,1,length.out = nrow(Results))
-
+cols = brewer.pal(8,'Set1')[2:3]
+col1 = cols[1] #adjustcolor('blue',alpha.f = .7)
+col2 = cols[2] #adjustcolor('green',alpha.f = .7)
+ 
 for(i in 1:nrow(Results)){
   arrows(log2(Results[i,'lowerCI']),ypos[yindex],
          log2(Results[i,'upperCI']),ypos[yindex],
@@ -512,7 +524,6 @@ for(i in 1:nrow(Results)){
   
   ind1 = Results_Africa$Names == Results$Names[i]
   ind2 = Results_Asia$Names == Results$Names[i]
-  col1 = adjustcolor('blue',alpha.f = .7)
   
   arrows(log2(Results_Africa[ind1,'lowerCI']),ypos[yindex]-epsilon,
          log2(Results_Africa[ind1,'upperCI']),ypos[yindex]-epsilon,
@@ -520,7 +531,6 @@ for(i in 1:nrow(Results)){
          col = col1,lwd=3)
   points(log2(Results_Africa[ind1,'mean']),ypos[yindex]-epsilon,pch=18,cex=2,col=col1)
   
-  col2 = adjustcolor('green',alpha.f = .7)
   arrows(log2(Results_Asia[ind2,'lowerCI']),ypos[yindex]+epsilon,
          log2(Results_Asia[ind2,'upperCI']),ypos[yindex]+epsilon,
          length=0.0, angle=90, code=3, 
@@ -536,7 +546,7 @@ axis(side = 2, at = ypos, labels = Results$Names,tick=FALSE)
 mtext(side=1, line = 2.5, text = 'Adjusted odds ratio')
 mtext(side = 3, line = 1, text = 'Increased survival',adj = 0)
 mtext(side = 3, line = 1, text = 'Decreased survival',adj = 1)
-legend('bottomright', col = c('black','blue','green'), 
+legend('bottomright', col = c('black',cols), bty='y',bg = 'white',
        legend = c('All data','African data','Asian data'),lwd=3, inset = 0.02)
 ```
 

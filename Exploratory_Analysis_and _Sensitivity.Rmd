@@ -14,7 +14,7 @@ knitr::opts_chunk$set(cache = TRUE, cache.comments = FALSE,
                       echo = TRUE, include = TRUE, 
                       fig.width = 7, fig.height = 7,
                       fig.pos = 'H', 
-                      dev = c('pdf','png'), dpi = 300)
+                      dev = 'cairo_pdf', dpi = 400)
 
 RUN_MODELS = F
 ```
@@ -40,7 +40,10 @@ library(merTools)
 This looks at the severe malaria legacy dataset from MORU.
 
 ```{r, echo=FALSE}
+# original dataset
 load('RData/Data.RData')
+#imputed datasets
+load('RData/Multiple_Imputed_Datasets.RData')
 
 ind_missing = apply(m[,c('AgeInYear','HCT','BUN','BD','LPAR_pct')], 1, function(x) sum(is.na(x))>0)
 Leg_data_complete = m[!ind_missing,]
@@ -171,36 +174,41 @@ legend('bottomright',col=mycols,inset = 0.01,
 Effect on survival 
 
 ```{r UnAdjusted}
-modHCT=gam(outcome ~ s(HCT) + s(studyID, bs='re') + s(country, bs='re'),
-           data = Leg_data_complete, family='binomial')
+XX = SM_Impute_List[[1]]
+kids=XX$AgeInYear<=12
+modHCT_kids=gam(outcome ~ s(HCT) + s(studyID, bs='re') + s(country, bs='re'),
+           data = XX[kids,], family='binomial')
+modHCT_adults=gam(outcome ~ s(HCT) + s(studyID, bs='re') + s(country, bs='re'),
+           data = XX[!kids,], family='binomial')
 
 modcoma=gam(outcome ~ coma + s(studyID, bs='re') + s(country, bs='re'),
-            data = Leg_data_complete, family='binomial')
+            data = XX, family='binomial')
 
 modBD=gam(outcome ~ s(BD) + s(studyID, bs='re') + s(country, bs='re'),
-          data = Leg_data_complete, family='binomial')
+          data = XX, family='binomial')
 
 modpoedema=gam(outcome ~ poedema + s(studyID, bs='re') + s(country, bs='re'),
-               data = Leg_data_complete, family='binomial')
+               data = XX, family='binomial')
 
 modconv=gam(outcome ~ convulsions + s(studyID, bs='re') + s(country, bs='re'),
-            data = Leg_data_complete, family='binomial')
+            data = XX, family='binomial')
 
 modshock=gam(outcome ~ shock + s(studyID, bs='re') + s(country, bs='re'),
-             data = Leg_data_complete, family='binomial')
+             data = XX, family='binomial')
 
 modBUN=gam(outcome ~ s(log10(BUN)) + s(studyID, bs='re') + s(country, bs='re'),
-           data = Leg_data_complete, family='binomial')
+           data = XX, family='binomial')
 
 modLPAR_pct=gam(outcome ~ s(LPAR_pct) + s(studyID, bs='re') + s(country, bs='re'),
-                data = Leg_data_complete, family='binomial')
+                data = XX, family='binomial')
 ```
 
 ```{r UnadjustedPlots, echo=FALSE}
 par(las=1, bty='n', mfrow=c(2,4))
 
 Factors = c('HCT','coma','BD','poedema','convulsions','BUN')
-x_hcts = seq(10,45, by=1)
+x_hcts_kids = seq(8,40, by=1)
+x_hcts_adults = seq(10,50, by=1)
 x_comas = 0:1
 x_shock = 0:1
 x_conv = 0:1
@@ -221,23 +229,35 @@ plot(x_bd, 100*inv.logit(predsBD$fit), ylab='mortality (%)',
 mtext(text = 'Base deficit (mEq/L)',side = 1,line = 2.5, cex=.7)
 polygon(c(x_bd, rev(x_bd)), 100*inv.logit(c(predsBD$fit + 1.96*predsBD$se.fit,
                                             rev(predsBD$fit - 1.96*predsBD$se.fit))),
-        lty=2,lwd=2, border = NA, col = rgb(0, 0, 1,0.5))
+        lty=2,lwd=2, border = NA, col = adjustcolor('blue',alpha.f = .3))
 
 #************** HCT
-predsHCT = predict(modHCT, 
-                   newdata = data.frame(HCT=x_hcts, 
-                                        studyID='AQ', 
-                                        country='Thailand'), 
+predsHCTkids = predict(modHCT_kids, 
+                   newdata = data.frame(HCT=x_hcts_kids, 
+                                        studyID='AQUAMAT', 
+                                        country='Kenya'), 
                    exclude = c("s(country)","s(studyID)"), 
                    se.fit=T)
-plot(x_hcts, 100*inv.logit(predsHCT$fit), ylab='mortality (%)', 
-     panel.first = grid(), xlab='', 
-     type='l', lwd=3,ylim = c(0,25))
+predsHCTadults = predict(modHCT_adults, 
+                   newdata = data.frame(HCT=x_hcts_adults, 
+                                        studyID='AQ', 
+                                        country='Vietnam'), 
+                   exclude = c("s(country)","s(studyID)"), 
+                   se.fit=T)
+plot(x_hcts_kids, 100*inv.logit(predsHCTkids$fit), ylab='mortality (%)', 
+     panel.first = grid(), xlab='', xlim = range(c(x_hcts_kids,x_hcts_adults)),
+     type='l', lwd=3,ylim = c(0,35),lty='dotted')
+lines(x_hcts_adults, 100*inv.logit(predsHCTadults$fit), ylab='mortality (%)', 
+     type='l', lwd=3, lty='longdash')
 mtext(text = 'Haematocrit (%)',side = 1,line = 2.5,cex=.7)
-polygon(c(x_hcts,rev(x_hcts)), 
-        100*inv.logit(c(predsHCT$fit + 1.96*predsHCT$se.fit, 
-                        rev(predsHCT$fit - 1.96*predsHCT$se.fit))),
-        lty=2,lwd=2,border = NA, col = rgb(0, 0, 1,0.5))
+polygon(c(x_hcts_kids,rev(x_hcts_kids)), 
+        100*inv.logit(c(predsHCTkids$fit + 1.96*predsHCTkids$se.fit, 
+                        rev(predsHCTkids$fit - 1.96*predsHCTkids$se.fit))),
+        lty=2,lwd=2,border = NA, col = adjustcolor('blue',alpha.f = .3))
+polygon(c(x_hcts_adults,rev(x_hcts_adults)), 
+        100*inv.logit(c(predsHCTadults$fit + 1.96*predsHCTadults$se.fit, 
+                        rev(predsHCTadults$fit - 1.96*predsHCTadults$se.fit))),
+        lty=2,lwd=2,border = NA, col = adjustcolor('blue',alpha.f = .3))
 
 #************** BUN
 predsBUN = predict(modBUN, newdata = data.frame(BUN=x_BUN, 
@@ -247,13 +267,13 @@ predsBUN = predict(modBUN, newdata = data.frame(BUN=x_BUN,
                    se.fit=T)
 plot(log10(x_BUN), 100*inv.logit(predsBUN$fit), ylab='mortality (%)', 
      xlab='', panel.first = grid(), 
-     type='l', lwd=3,ylim = c(0,60), xaxt='n')
+     type='l', lwd=3,ylim = c(0,55), xaxt='n')
 mtext(text = 'Blood urea nitrogen (mmol/L)',side = 1,line = 2.5,cex=.7)
 axis(1, at = log10(c(2,10,100)), labels = c(2,10,100))
 polygon(c(log10(x_BUN),rev(log10(x_BUN))), 
         100*inv.logit(c(predsBUN$fit + 1.96*predsBUN$se.fit,
                         rev(predsBUN$fit - 1.96*predsBUN$se.fit))), 
-        lty=2,lwd=2, border = NA, col = rgb(0, 0, 1,0.5))
+        lty=2,lwd=2, border = NA, col = adjustcolor('blue',alpha.f = .3))
 
 #************** Log10 parasitaemia
 predspara_PCT = predict(modLPAR_pct, newdata = data.frame(LPAR_pct=x_parasites, 
@@ -270,7 +290,7 @@ axis(1, at = log10(c(10,20)), labels = NA)
 polygon(c(x_parasites,rev(x_parasites)), 
         100*inv.logit(c(predspara_PCT$fit + 1.96*predspara_PCT$se.fit,
                         rev(predspara_PCT$fit - 1.96*predspara_PCT$se.fit))), 
-        lty=2,lwd=2, border = NA, col = rgb(0, 0, 1,0.5))
+        lty=2,lwd=2, border = NA, col = adjustcolor('blue',alpha.f = .3))
 
 #**************  Coma
 predscoma = predict(modcoma, newdata = data.frame(coma=x_comas, 
@@ -280,16 +300,16 @@ predscoma = predict(modcoma, newdata = data.frame(coma=x_comas,
                     se.fit=T)
 plot(x_comas, 100*inv.logit(predscoma$fit), ylab='mortality (%)', 
      panel.first = grid(), xlab='', 
-     type='p', lwd=3, ylim = c(0,28), xaxt='n', 
+     type='p', lwd=3, ylim = c(0,30), xaxt='n', 
      pch=19, xlim = c(-.25,1.25))
 axis(1, at=x_comas, labels = c('No Coma','Coma'), 
      tick = F,line = .5,cex.axis=.9)
 ys = 100*inv.logit(c(predscoma$fit - 1.96*predscoma$se.fit,
                      predscoma$fit + 1.96*predscoma$se.fit))
 arrows(x0 = x_comas[1],y0 = ys[1], x1 = x_comas[1], y1 = ys[3],
-       angle = 90,lwd=6,code = 3,length=0,col = rgb(0, 0, 1,0.5))
+       angle = 90,lwd=6,code = 3,length=0,col = adjustcolor('blue',alpha.f = .3))
 arrows(x0 = x_comas[2],y0 = ys[2], x1 = x_comas[2], y1 = ys[4],
-       angle = 90,lwd=6,code = 3,length=0,col = rgb(0, 0, 1,0.5))
+       angle = 90,lwd=6,code = 3,length=0,col = adjustcolor('blue',alpha.f = .3))
 
 
 #************** Convulsions
@@ -300,7 +320,7 @@ predsconv = predict(modconv, newdata = data.frame(convulsions=x_conv,
                     se.fit=T)
 plot(x_conv, 100*inv.logit(predsconv$fit), 
      panel.first = grid(), ylab='mortality (%)', xlab='', 
-     type='p', lwd=3, ylim = c(0,23), xaxt='n',
+     type='p', lwd=3, ylim = c(0,25), xaxt='n',
      pch=19, xlim = c(-.25,1.25))
 axis(1, at=x_conv, labels = c('No seizures','Seizures'),
      tick = F,line = .5,cex.axis=.9)
@@ -308,9 +328,9 @@ axis(1, at=x_conv, labels = c('No seizures','Seizures'),
 ys = 100*inv.logit(c(predsconv$fit + 1.96*predsconv$se.fit,
                      predsconv$fit -1.96*predsconv$se.fit))
 arrows(x0 = x_conv[1],y0 = ys[1], x1 = x_conv[1], y1 = ys[3],angle = 90,
-       lwd=6,code = 3,length=0,col = rgb(0, 0, 1,0.5))
+       lwd=6,code = 3,length=0,col = adjustcolor('blue',alpha.f = .3))
 arrows(x0 = x_conv[2],y0 = ys[2], x1 = x_conv[2], y1 = ys[4],angle = 90,
-       lwd=6,code = 3,length=0,col = rgb(0, 0, 1,0.5))
+       lwd=6,code = 3,length=0,col = adjustcolor('blue',alpha.f = .3))
 
 #************** Pulmonary Oedema
 predspoedema = predict(modpoedema, 
@@ -321,16 +341,16 @@ predspoedema = predict(modpoedema,
                        se.fit=T)
 plot(x_poedema, 100*inv.logit(predspoedema$fit), 
      panel.first = grid(), ylab='mortality (%)', xlab='', 
-     type='p', lwd=3, ylim = c(0,30), xaxt='n',
+     type='p', lwd=3, ylim = c(0,24), xaxt='n',
      pch=19, xlim = c(-.25,1.25))
 axis(1, at=x_poedema, labels = c('No\nPulmonary\nOedema','Pulmonary\nOedema'),
      tick = F,line = 1.5,cex.axis=.9)
 ys = 100*inv.logit(c(predspoedema$fit + 1.96*predspoedema$se.fit,
                      (predspoedema$fit - 1.96*predspoedema$se.fit)))
 arrows(x0 = x_poedema[1],y0 = ys[1], x1 = x_poedema[1], y1 = ys[3],angle = 90,
-       lwd=6,code = 3,length=0,col = rgb(0, 0, 1,0.5))
+       lwd=6,code = 3,length=0,col = adjustcolor('blue',alpha.f = .3))
 arrows(x0 = x_poedema[2],y0 = ys[2], x1 = x_poedema[2], y1 = ys[4],angle = 90,
-       lwd=6,code = 3,length=0,col = rgb(0, 0, 1,0.5))
+       lwd=6,code = 3,length=0,col = adjustcolor('blue',alpha.f = .3))
 
 #************** Shock
 predsshock = predict(modshock, 
@@ -341,16 +361,16 @@ predsshock = predict(modshock,
                      se.fit=T)
 plot(x_shock, 100*inv.logit(predsshock$fit), 
      panel.first = grid(), ylab='mortality (%)', xlab='', 
-     type='p', lwd=3, ylim = c(0,27), xaxt='n',
+     type='p', lwd=3, ylim = c(0,32), xaxt='n',
      pch=19, xlim = c(-.25,1.25))
 axis(1, at=x_shock, labels = c('No shock','Shock'),
      tick = F,line = 1.5,cex.axis=.9)
 ys = 100*inv.logit(c(predsshock$fit + 1.96*predsshock$se.fit,
                      (predsshock$fit - 1.96*predsshock$se.fit)))
 arrows(x0 = x_shock[1],y0 = ys[1], x1 = x_shock[1], y1 = ys[3],angle = 90,
-       lwd=6,code = 3,length=0,col = rgb(0, 0, 1,0.5))
+       lwd=6,code = 3,length=0,col = adjustcolor('blue',alpha.f = .3))
 arrows(x0 = x_shock[2],y0 = ys[2], x1 = x_shock[2], y1 = ys[4],angle = 90,
-       lwd=6,code = 3,length=0,col = rgb(0, 0, 1,0.5))
+       lwd=6,code = 3,length=0,col = adjustcolor('blue',alpha.f = .3))
 ```
 
 Compute risk ratios with confidence intervals for the binary predictors:
@@ -479,7 +499,6 @@ mtext(side = 3, line = 1, text = 'Decreased survival',adj = 1)
 # Trim very low haematocrits
 
 ```{r}
-load('RData/Multiple_Imputed_Datasets.RData')
 for (i in 1:length(SM_Impute_List)){
   SM_Impute_List[[i]] = filter(SM_Impute_List[[i]], HCT > 9)
 }

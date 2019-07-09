@@ -138,29 +138,33 @@ Effect on survival
 
 
 ```r
-modHCT=gam(outcome ~ s(HCT) + s(studyID, bs='re') + s(country, bs='re'),
-           data = Leg_data_complete, family='binomial')
+XX = SM_Impute_List[[1]]
+kids=XX$AgeInYear<=12
+modHCT_kids=gam(outcome ~ s(HCT) + s(studyID, bs='re') + s(country, bs='re'),
+           data = XX[kids,], family='binomial')
+modHCT_adults=gam(outcome ~ s(HCT) + s(studyID, bs='re') + s(country, bs='re'),
+           data = XX[!kids,], family='binomial')
 
 modcoma=gam(outcome ~ coma + s(studyID, bs='re') + s(country, bs='re'),
-            data = Leg_data_complete, family='binomial')
+            data = XX, family='binomial')
 
 modBD=gam(outcome ~ s(BD) + s(studyID, bs='re') + s(country, bs='re'),
-          data = Leg_data_complete, family='binomial')
+          data = XX, family='binomial')
 
 modpoedema=gam(outcome ~ poedema + s(studyID, bs='re') + s(country, bs='re'),
-               data = Leg_data_complete, family='binomial')
+               data = XX, family='binomial')
 
 modconv=gam(outcome ~ convulsions + s(studyID, bs='re') + s(country, bs='re'),
-            data = Leg_data_complete, family='binomial')
+            data = XX, family='binomial')
 
 modshock=gam(outcome ~ shock + s(studyID, bs='re') + s(country, bs='re'),
-             data = Leg_data_complete, family='binomial')
+             data = XX, family='binomial')
 
 modBUN=gam(outcome ~ s(log10(BUN)) + s(studyID, bs='re') + s(country, bs='re'),
-           data = Leg_data_complete, family='binomial')
+           data = XX, family='binomial')
 
 modLPAR_pct=gam(outcome ~ s(LPAR_pct) + s(studyID, bs='re') + s(country, bs='re'),
-                data = Leg_data_complete, family='binomial')
+                data = XX, family='binomial')
 ```
 
 ![](Exploratory_Analysis_and__Sensitivity_files/figure-html/UnadjustedPlots-1.pdf)<!-- -->
@@ -341,8 +345,23 @@ lines(5:50, 100*f2(5:50), col='green',lwd=2)
 axis(1, at = c(5,10,15,20,25,35,45))
 
 f_inverse = approxfun(x = f(1:50),y = 1:50)
-f2_inverse = approxfun(x = f2(1:50),y = 1:50)
+```
 
+```
+## Warning in regularize.values(x, y, ties, missing(ties)): collapsing to
+## unique 'x' values
+```
+
+```r
+f2_inverse = approxfun(x = f2(1:50),y = 1:50)
+```
+
+```
+## Warning in regularize.values(x, y, ties, missing(ties)): collapsing to
+## unique 'x' values
+```
+
+```r
 lines(c(-10, f2_inverse(.1)), c(10,10), lty=2)
 lines(c(-10, f2_inverse(.5)), c(50,50), lty=2)
 lines(c(f2_inverse(.5),f2_inverse(.5)), c(-10,50), lty=2)
@@ -540,14 +559,9 @@ mtext(side = 3, line = 1, text = 'Decreased survival',adj = 1)
 
 
 ```r
-load('RData/Multiple_Imputed_Datasets.RData')
 for (i in 1:length(SM_Impute_List)){
   SM_Impute_List[[i]] = filter(SM_Impute_List[[i]], HCT > 9)
 }
-```
-
-```
-## Warning: package 'bindrcpp' was built under R version 3.4.4
 ```
 
 
@@ -558,6 +572,14 @@ for (i in 1:length(SM_Impute_List)){
 # extract the fixed and random effects from all the model fits
 # These functions then compute the overall estimates
 FixedEffs = modelFixedEff(modList)
+```
+
+```
+## Warning in modelFixedEff(modList): Between imputation variance is very
+## small, are imputation sets too similar?
+```
+
+```r
 RandEffs = modelRandEffStats(modList)
 print(FixedEffs)
 ```
@@ -770,6 +792,14 @@ if(RUN_MODELS){
 }
 
 FixedEffs = modelFixedEff(modList)
+```
+
+```
+## Warning in modelFixedEff(modList): Between imputation variance is very
+## small, are imputation sets too similar?
+```
+
+```r
 print(FixedEffs)
 ```
 
@@ -940,6 +970,14 @@ Compute the overall parameter estimates:
 # extract the fixed effects from all the model fits
 # These functions then compute the overall estimates
 FixedEffs = modelFixedEff(modList)
+```
+
+```
+## Warning in modelFixedEff(modList): Between imputation variance is very
+## small, are imputation sets too similar?
+```
+
+```r
 print(FixedEffs)
 ```
 

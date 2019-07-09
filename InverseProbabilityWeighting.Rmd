@@ -7,20 +7,19 @@ output: html_document
 
 ```{r, echo=F, include=FALSE}
 knitr::opts_chunk$set(cache = TRUE, cache.comments = FALSE, 
-                      echo = FALSE, include = TRUE, 
+                      echo = T, include = TRUE, 
                       fig.width = 7, fig.height = 7,
                       fig.pos = 'H', 
-                      dev = 'png', dpi = 300)
+                      dev = 'cairo_pdf', dpi = 400)
 
 RUN_MODELS = F
 library(lme4)
-#library(merTools)
 library(dplyr)
 library(fields)
 library(boot)
 library(mice)
 library(plotrix)
-#library(glmnet)
+library(Hmisc)
 ```
 
 ## Load dataset
@@ -28,102 +27,6 @@ library(plotrix)
 ```{r}
 load('RData/Multiple_Imputed_Datasets.RData')
 ```
-
-
-
-# Inverse probability weighting for the marginal effect of moderate anaemia
-## Function to compute IPW for specific exposure levels
-
-The idea is as follows:
-
-* We define all intervals of HCT [h1,h2], such that at least 10 percent and at most 90 percent of patients have HCTs within [h1,h2]
-* We use IPW to compare outcomes for patients within the interval and outside each interval [h1,h2]
-
-
-
-```{r, echo=FALSE}
-compute_IPW_weighting = function(SM_Impute_List, 
-                                 LowerLimit_children = 15,
-                                 LowerLimit_adults = 20,
-                                 UpperLimit_children = 25,
-                                 UpperLimit_adults = 30,
-                                 prop_threshold,
-                                 ipw_quantile_cutoff=.95,
-                                 DAG_fmla, age_threshold = 12){
-  
-  # Go through the datasets and compute weights
-  for(k in 1:length(SM_Impute_List)){
-    ind_children = SM_Impute_List[[k]]$AgeInYear < age_threshold
-    SM_Impute_List[[k]]$ModerateAnaemia = NA
-    
-    SM_Impute_List[[k]]$ModerateAnaemia[ind_children] =
-      ifelse(SM_Impute_List[[k]]$HCT[ind_children] <= UpperLimit_children & 
-               SM_Impute_List[[k]]$HCT[ind_children] >= LowerLimit_children,
-             1, NA)
-    SM_Impute_List[[k]]$ModerateAnaemia[ind_children &
-                                          SM_Impute_List[[k]]$HCT > UpperLimit_children] = 0
-    
-    # Adults    
-    ind_adults = SM_Impute_List[[k]]$AgeInYear >= age_threshold
-    SM_Impute_List[[k]]$ModerateAnaemia[ind_adults] =
-      ifelse(SM_Impute_List[[k]]$HCT[ind_adults] <= UpperLimit_adults & 
-               SM_Impute_List[[k]]$HCT[ind_adults] >= LowerLimit_adults,
-             1, NA)
-    SM_Impute_List[[k]]$ModerateAnaemia[ind_adults &
-                                          SM_Impute_List[[k]]$HCT > UpperLimit_adults] = 0
-    
-    
-    complete_ind = !is.na(SM_Impute_List[[k]]$ModerateAnaemia)
-    SM_Impute_List[[k]] = SM_Impute_List[[k]][complete_ind,]
-    
-    # fit the IP weighting model
-    mod = glmer(DAG_fmla, data = SM_Impute_List[[k]], family=binomial)
-    
-    ind_inside = SM_Impute_List[[k]]$ModerateAnaemia == 1
-    SM_Impute_List[[k]]$weights = NA
-    SM_Impute_List[[k]]$weights[ind_inside] = 
-      1/predict(mod,                                          
-                newdata=SM_Impute_List[[k]][ind_inside,],
-                type='response')
-    SM_Impute_List[[k]]$weights[!ind_inside] = 
-      1/(1-predict(mod,
-                   newdata=SM_Impute_List[[k]][!ind_inside,],
-                   type='response'))
-    
-    
-    max_weight = 50
-    SM_Impute_List[[k]]$weights[SM_Impute_List[[k]]$weights > max_weight] = NA
-    
-    
-    print(k)
-  }
-  
-  mod_list = lapply(SM_Impute_List, function(x) glm(outcome ~ ModerateAnaemia,
-                                                    data = x,
-                                                    family='quasibinomial',
-                                                    weights = weights))
-  mod_summary = pool(mod_list)
-  
-  IPW_results = list(SM_Impute_List=SM_Impute_List, 
-                     mod_summary=mod_summary)
-  return(IPW_results)
-}
-```
-
-
-```{r}
-DAG_fmla = "ModerateAnaemia ~ LPAR_pct + coma + convulsions + AgeInYear +
-BD + shock + (1|country) + continent"
-
-res_interval_IPW = compute_IPW_weighting(SM_Impute_List = SM_Impute_List[1:10],
-                                         LowerLimit_children = 10,
-                                         LowerLimit_adults = 15,
-                                         UpperLimit_children = 20,
-                                         UpperLimit_adults = 25,
-                                         prop_threshold = .05,
-                                         DAG_fmla = DAG_fmla)
-```
-
 
 
 ### Inverse probability weighting: Transfusion studies
@@ -138,7 +41,7 @@ m$Outcome4hours[!is.na(m$Timetodeathhrs) & m$Timetodeathhrs < 4] = 1
 # We only look at individuals who survive past 4 hours
 m = filter(m, Outcome4hours==0)
 
-Transfusion_Data = m[m$studyID%in%c('AQUAMAT','AAV','AQ'),]
+Transfusion_Data = m[m$studyID%in%c('AQUAMAT'),]
 round(100*table(Transfusion_Data$transfusion)/nrow(Transfusion_Data),1)
 unique_ids_Transfusion = Transfusion_Data$Unique_ID
 ```
@@ -151,57 +54,51 @@ for(i in 1:length(SM_Impute_List)){
 }
 ```
 
+Set the lower and upper limits of HCT for the transfusion IPW analysis:
+```{r}
+Lower_HCT_children = 15
+Upper_HCT_children = 25
+```
+
 
 
 We used the time-to-death stratified data to fit a propensity score model:
-
-
-
 ```{r}
 if(RUN_MODELS){
+  # IPW model
   DAG_fmla = "transfusion ~ HCT + coma + convulsions + 
               log2(BUN) + BD + shock + hypoglycaemia + AgeInYear +
               (1 | country)"
-  # fit the model to each dataset
+  
   Modified_Sm_Impute_List = SM_Impute_List
+  # fit the model to each dataset
   for(k in 1:length(Modified_Sm_Impute_List)){
     
+    # fit model
     mod_weights = glmer(DAG_fmla, data = Modified_Sm_Impute_List[[k]],
                         family=binomial) 
-    ind_children = Modified_Sm_Impute_List[[k]]$HCT > 15 & Modified_Sm_Impute_List[[k]]$HCT <= 25 & Modified_Sm_Impute_List[[k]]$AgeInYear < 12
-    ind_adults = Modified_Sm_Impute_List[[k]]$HCT > 20 & Modified_Sm_Impute_List[[k]]$HCT <= 30 & Modified_Sm_Impute_List[[k]]$AgeInYear >= 12
-    Modified_Sm_Impute_List[[k]] = Modified_Sm_Impute_List[[k]][ind_children | ind_adults,]
+    
     
     transfused = Modified_Sm_Impute_List[[k]]$transfusion==1
     Modified_Sm_Impute_List[[k]]$weights = NA
-    Modified_Sm_Impute_List[[k]]$weights[transfused] = 1/predict(mod_weights,
-                                                                 newdata=Modified_Sm_Impute_List[[k]][transfused,],
+    # estimate IPWs
+    Modified_Sm_Impute_List[[k]]$weights[transfused] = 1/predict(mod_weights,                                                                 newdata=Modified_Sm_Impute_List[[k]][transfused,],
                                                                  type='response')
     Modified_Sm_Impute_List[[k]]$weights[!transfused] = 1/(1-predict(mod_weights,
                                                                      newdata=Modified_Sm_Impute_List[[k]][!transfused,],
                                                                      type='response'))
-    max_weight = 100#quantile(Modified_Sm_Impute_List[[k]]$weights,probs = .99)
-    Modified_Sm_Impute_List[[k]]$weights[Modified_Sm_Impute_List[[k]]$weights>max_weight]=NA
-    print(k)
+    # trim weights greater than 100
+    Modified_Sm_Impute_List[[k]]$weights[Modified_Sm_Impute_List[[k]]$weights>100] = 100
+    # set weights outside the pre-specified window to NA
+    Modified_Sm_Impute_List[[k]]$weights[!(Modified_Sm_Impute_List[[k]]$HCT>=Lower_HCT_children &
+                                             Modified_Sm_Impute_List[[k]]$HCT<=Upper_HCT_children)] = NA
+    
   }
   save(Modified_Sm_Impute_List, file = 'RData/Imputed_List_Weights.RData')
   
 } else {
   load('RData/Imputed_List_Weights.RData')
 }
-
-mod_imputed_all = lapply(Modified_Sm_Impute_List, function(x) {
-  glm(formula = outcome ~ transfusion, 
-      data = x,
-      weights = weights,
-      family = 'quasibinomial')
-} )
-summary_mod = summary(pool(mod_imputed_all))
-
-writeLines(sprintf('The global estimate of the odds ratio for death in transfused versus not is %s (%s-%s)',
-                   round(exp(summary_mod$estimate[2]),2),
-                   round(exp(summary_mod$estimate[2] - 1.96*summary_mod$std.error[2]),2),
-                   round(exp(summary_mod$estimate[2] + 1.96*summary_mod$std.error[2]),2)))
 
 
 mod_imputed_children = lapply(Modified_Sm_Impute_List, function(x){
@@ -213,22 +110,8 @@ mod_imputed_children = lapply(Modified_Sm_Impute_List, function(x){
 } )
 summary_mod = summary(pool(mod_imputed_children))
 
-writeLines(sprintf('The estimate in those < 15 years of age of the odds ratio for death in transfused versus not is %s (%s-%s)',
-                   round(exp(summary_mod$estimate[2]),2),
-                   round(exp(summary_mod$estimate[2]-1.96*summary_mod$std.error[2]),2),
-                   round(exp(summary_mod$estimate[2]+1.96*summary_mod$std.error[2]),2)))
 
-
-mod_imputed_adults = lapply(Modified_Sm_Impute_List, function(x){
-  ind_adults = x$AgeInYear >= 15
-  glm(formula = outcome ~ transfusion, 
-      data = x[ind_adults,],
-      weights = weights,
-      family = 'quasibinomial')
-} )
-summary_mod = summary(pool(mod_imputed_adults))
-
-writeLines(sprintf('The estimate in those > 15 years of age of the odds ratio for death in transfused versus not is %s (%s-%s)',
+writeLines(sprintf('The estimated odds ratio for death in the AQUAMAT study for those transfused versus those not is %s (%s-%s)',
                    round(exp(summary_mod$estimate[2]),2),
                    round(exp(summary_mod$estimate[2]-1.96*summary_mod$std.error[2]),2),
                    round(exp(summary_mod$estimate[2]+1.96*summary_mod$std.error[2]),2)))
@@ -236,67 +119,204 @@ writeLines(sprintf('The estimate in those > 15 years of age of the odds ratio fo
 ```
 
 
-Plot an example of rewighting:
+Plot an example of the reweighting:
 ```{r Transfusion_IPW}
-par(las=1, mfrow=c(2,2))
+par(las=1, mfrow=c(1,2))
+set.seed(73252)
+ks = sample(x = 1:length(Modified_Sm_Impute_List),1)
 
-k = sample(x = 1:length(Modified_Sm_Impute_List),1)
+for(k in ks){
+  ind_children =  Modified_Sm_Impute_List[[k]]$AgeInYear < 12
+  ind_adults = Modified_Sm_Impute_List[[k]]$AgeInYear >= 12
+  na_weights = is.na(Modified_Sm_Impute_List[[k]]$weights)
+  transfused = Modified_Sm_Impute_List[[k]]$transfusion==1
+  
+  hist(Modified_Sm_Impute_List[[k]]$HCT[ind_children&transfused],
+       breaks = seq(4,50, by = 1),
+       col = adjustcolor('red',alpha.f = .3),
+       main='', xlab='Haematocrit (%)', ylab = 'Number of patients')
+  hist(Modified_Sm_Impute_List[[k]]$HCT[ind_children& !transfused],
+       breaks = 4:50,
+       add=T,col=adjustcolor('blue',alpha.f = .3))
+  abline(v=c(Lower_HCT_children, Upper_HCT_children), lwd=3)
+  
+  legend('topright', fill = adjustcolor(c('red','blue'),alpha.f = .3), 
+         legend = c('Transfused','Not transfused'))
+  
+  ind_not_na = !is.na(Modified_Sm_Impute_List[[k]]$weights)
+  weighted.hist(x = Modified_Sm_Impute_List[[k]]$HCT[ind_not_na & !transfused & ind_children],
+                w = Modified_Sm_Impute_List[[k]]$weights[ind_not_na& !transfused & ind_children],
+                col=adjustcolor('blue',alpha.f = .3),
+                breaks = seq(Lower_HCT_children, Upper_HCT_children, by = 1),
+                ylab = 'Pseudo number of patients',xaxt='n')
+  weighted.hist(x = Modified_Sm_Impute_List[[k]]$HCT[ind_not_na & transfused & ind_children],
+                w = Modified_Sm_Impute_List[[k]]$weights[ind_not_na & transfused & ind_children],
+                col=adjustcolor('red',alpha.f = .3),breaks = seq(Lower_HCT_children, Upper_HCT_children, by = 1),
+                add=T, ylab = '',xlab='Haematocrit (%)')
+  
+}
 
-ind_children =  Modified_Sm_Impute_List[[k]]$AgeInYear < 12
-ind_adults = Modified_Sm_Impute_List[[k]]$AgeInYear >= 12
+writeLines(sprintf('There are n=%s patients within the %s-%s range of haematocrit',
+                   sum(Modified_Sm_Impute_List[[k]]$HCT>=Lower_HCT_children & Modified_Sm_Impute_List[[k]]$HCT <=Upper_HCT_children),
+                   Lower_HCT_children, Upper_HCT_children))
+```
 
-transfused = Modified_Sm_Impute_List[[k]]$transfusion==1
+
+We show the weighted distributions for the 4 main variables: coma, shock, base deficit and blood urea nitrogen
+
+```{r comparison_IPW_distributions}
+par(las=1, bty='n')
+layout(mat = matrix(c(1,1,1,2,2,2,
+                      3,3,4,4,5,5,
+                      6,6,7,7,8,8), nrow = 3, byrow = T))
 
 hist(Modified_Sm_Impute_List[[k]]$HCT[ind_children&transfused],
-     breaks = seq(15,25.5, length.out = 6),
-     col = adjustcolor('red',alpha.f = .3),xaxt='n',
-     main='', xlab='Haematocrit (%)', ylab = 'Number of patients')
+     breaks = seq(4,50, by = 1),
+     col = adjustcolor('red',alpha.f = .3),
+     main='All haematocrit values', 
+     xlab='Haematocrit (%)', ylab = 'Number of patients')
 hist(Modified_Sm_Impute_List[[k]]$HCT[ind_children& !transfused],
-     breaks = seq(15,25.5, length.out = 6),
+     breaks = 4:50,
      add=T,col=adjustcolor('blue',alpha.f = .3))
-legend('topright',bty='n',legend = c('Tranfused','Not transfused'),
-       col = adjustcolor(c('red','blue'),alpha.f = 0.3), lwd=3, cex=.8)
-title('Unweighted data')
-axis(1,at = (15:25))
+abline(v=c(Lower_HCT_children, Upper_HCT_children), lwd=3)
 
-
-
-hist(Modified_Sm_Impute_List[[k]]$HCT[ind_adults& !transfused],
-     breaks = seq(20,32, length.out = 6),
-     col = adjustcolor('blue',alpha.f = .3),xaxt='n',
-     main='', xlab='Haematocrit (%)', ylab = 'Number of patients')
-hist(Modified_Sm_Impute_List[[k]]$HCT[ind_adults& transfused],
-     breaks = seq(20,32, length.out = 6),
-     add=T,col=adjustcolor('red',alpha.f = .3))
-legend('topright',bty='n',legend = c('Tranfused','Not transfused'),
-       col = adjustcolor(c('red','blue'),alpha.f = 0.3), lwd=3, cex=.8)
-title('Unweighted data')
-axis(1,at = (21:35))
-
-
+legend('topright', fill = adjustcolor(c('red','blue'),alpha.f = .3), 
+       legend = c('Transfused','Not transfused'))
+mtext('A', side = 3, adj = -0.03, line = 2)
 
 ind_not_na = !is.na(Modified_Sm_Impute_List[[k]]$weights)
 weighted.hist(x = Modified_Sm_Impute_List[[k]]$HCT[ind_not_na & !transfused & ind_children],
               w = Modified_Sm_Impute_List[[k]]$weights[ind_not_na& !transfused & ind_children],
-              col=adjustcolor('blue',alpha.f = .3),breaks = seq(15,25.5, length.out = 6),
-              ylab = 'Pseudo number of patients',xaxt='n')
+              col=adjustcolor('blue',alpha.f = .3),
+              main = 'IPW haematocrits in 15-25% range',
+              breaks = seq(Lower_HCT_children, Upper_HCT_children, by = 1),
+              ylab = 'Pseudo number of patients',xaxt='n',xlab='Haematocrit (%)')
 weighted.hist(x = Modified_Sm_Impute_List[[k]]$HCT[ind_not_na & transfused & ind_children],
               w = Modified_Sm_Impute_List[[k]]$weights[ind_not_na & transfused & ind_children],
-              col=adjustcolor('red',alpha.f = .3),breaks = seq(15,25.5, length.out = 6),
-              add=T, ylab = '')
-title('Propensity score weighted data')
+              col=adjustcolor('red',alpha.f = .3),
+              breaks = seq(Lower_HCT_children, Upper_HCT_children, by = 1),
+              add=T)
+mtext('B', side = 3, adj = -0.03, line = 2)
 
 
-weighted.hist(x = Modified_Sm_Impute_List[[k]]$HCT[ind_not_na & transfused & ind_adults],
-              w = Modified_Sm_Impute_List[[k]]$weights[ind_not_na& transfused & ind_adults],
-              col=adjustcolor('red',alpha.f = .3),breaks = seq(20,32, length.out = 6),
-              ylab = 'Pseudo number of patients',xaxt='n')
-weighted.hist(x = Modified_Sm_Impute_List[[k]]$HCT[ind_not_na & !transfused & ind_adults],
-              w = Modified_Sm_Impute_List[[k]]$weights[ind_not_na & !transfused & ind_adults],
-              col=adjustcolor('blue',alpha.f = .3),breaks = seq(20,32, length.out = 6),
-              add=T, ylab = '')
-title('Propensity score weighted data')
+k = 1
+ind_children =  Modified_Sm_Impute_List[[k]]$AgeInYear < 12 & !is.na(Modified_Sm_Impute_List[[k]]$weights)
+x = Modified_Sm_Impute_List[[k]]
+x = x[ind_children, ]
+transfused = x$transfusion==1
+###**** Coma *****
+plot(0:1,100*c(mean(x$coma[!transfused]), mean(x$coma[transfused])), xlim = c(0,1), 
+     ylim = 100*c(0.25,.4), xaxt='n',xlab='', main = 'Coma',
+     ylab = '%', pch=16, cex=2)
+axis(1, at =0:1, labels = c('Not transfused','Transfused'), tick = F)
+for(k in 1:length(Modified_Sm_Impute_List)){
+  ind_children =  Modified_Sm_Impute_List[[k]]$AgeInYear < 12 & !is.na(Modified_Sm_Impute_List[[k]]$weights)
+  x = Modified_Sm_Impute_List[[k]]
+  x = x[ind_children, ]
+  transfused = x$transfusion==1
+  points(jitter(1), 100* weighted.mean(x$coma[transfused], w = x$weights[transfused]), pch='.', col='red')
+  points(jitter(0), 100*weighted.mean(x$coma[!transfused], w = x$weights[!transfused]), pch='.', col='red')
+  
+}
+abline(h = 100*weighted.mean(x$coma, x$weights), lty=2)
+mtext('C', side = 3, adj = -0.03, line = 2)
 
+
+###**** Shock *****
+x$shock = as.numeric(as.character(x$shock))
+plot(0:1,100*c(mean(x$shock[!transfused]), mean(x$shock[transfused])), xlim = c(0,1), 
+     ylim = 100*c(.015,.035), xaxt='n',xlab='', main='Shock',
+     ylab = '%', pch=16, cex=2)
+axis(1, at =0:1, labels = c('Not transfused','Transfused'), tick = F)
+for(k in 1:length(Modified_Sm_Impute_List)){
+  ind_children =  Modified_Sm_Impute_List[[k]]$AgeInYear < 12 & !is.na(Modified_Sm_Impute_List[[k]]$weights)
+  x = Modified_Sm_Impute_List[[k]]
+  x = x[ind_children, ]
+  transfused = x$transfusion==1
+  x$shock = as.numeric(as.character(x$shock))
+  points(jitter(1), 100* weighted.mean(x$shock[transfused], w = x$weights[transfused]), pch='.', col='red')
+  points(jitter(0), 100*weighted.mean(x$shock[!transfused], w = x$weights[!transfused]), pch='.', col='red')
+  
+}
+abline(h = 100*weighted.mean(x$shock,x$weights), lty=2)
+mtext('D', side = 3, adj = -0.03, line = 2)
+
+
+###**** Convulsions *****
+x$convulsions = as.numeric(as.character(x$convulsions))
+plot(0:1,100*c(mean(x$convulsions[!transfused]), mean(x$convulsions[transfused])), xlim = c(0,1), 
+     ylim = 100*c(.18,.32), xaxt='n',xlab='',main='Convulsions',
+     ylab = '%', pch=16, cex=2)
+axis(1, at =0:1, labels = c('Not transfused','Transfused'), tick = F)
+for(k in 1:length(Modified_Sm_Impute_List)){
+  ind_children =  Modified_Sm_Impute_List[[k]]$AgeInYear < 12 & !is.na(Modified_Sm_Impute_List[[k]]$weights)
+  x = Modified_Sm_Impute_List[[k]]
+  x = x[ind_children, ]
+  transfused = x$transfusion==1
+  x$convulsions = as.numeric(as.character(x$convulsions))
+  points(jitter(1), 100* weighted.mean(x$convulsions[transfused], w = x$weights[transfused]), pch='.', col='red')
+  points(jitter(0), 100*weighted.mean(x$convulsions[!transfused], w = x$weights[!transfused]), pch='.', col='red')
+  
+}
+abline(h = 100*weighted.mean(x$convulsions,x$weights), lty=2)
+mtext('E', side = 3, adj = -0.03, line = 2)
+
+###**** Hypoglycaemia *****
+x$hypoglycaemia = as.numeric(as.character(x$hypoglycaemia))
+plot(0:1,100*c(mean(x$hypoglycaemia[!transfused]), mean(x$hypoglycaemia[transfused])), xlim = c(0,1), 
+     ylim = 100*c(0.06,.12), xaxt='n',xlab='', main='Hypoglycaemia',
+     ylab = '%', pch=16, cex=2)
+axis(1, at =0:1, labels = c('Not transfused','Transfused'), tick = F)
+for(k in 1:length(Modified_Sm_Impute_List)){
+  ind_children =  Modified_Sm_Impute_List[[k]]$AgeInYear < 12 & !is.na(Modified_Sm_Impute_List[[k]]$weights)
+  x = Modified_Sm_Impute_List[[k]]
+  x = x[ind_children, ]
+  transfused = x$transfusion==1
+  x$convulsions = as.numeric(as.character(x$convulsions))
+  points(jitter(1), 100* weighted.mean(x$hypoglycaemia[transfused], w = x$weights[transfused]), pch='.', col='red')
+  points(jitter(0), 100*weighted.mean(x$hypoglycaemia[!transfused], w = x$weights[!transfused]), pch='.', col='red')
+  
+}
+abline(h = 100*weighted.mean(x$hypoglycaemia,x$weights), lty=2)
+mtext('F', side = 3, adj = -0.03, line = 2)
+
+
+###**** Base deficit *****
+ps=(1:99)/100
+plot(quantile(x$BD[!transfused],probs = ps),
+     quantile(x$BD[transfused],probs = ps),lwd=3, main='Base deficit',
+     xlab = 'Not transfused', ylab = 'Transfused', type='l')
+lines(c(-10,40), c(-10,40), lwd=2,lty=2)
+lines(wtd.quantile(x$BD[!transfused],weights = x$weights[!transfused],probs = ps),
+      wtd.quantile(x$BD[transfused],weights = x$weights[transfused],probs = ps),col='red')
+for(k in 1:length(Modified_Sm_Impute_List)){
+  ind_children =  Modified_Sm_Impute_List[[k]]$AgeInYear < 12 & !is.na(Modified_Sm_Impute_List[[k]]$weights)
+  x = Modified_Sm_Impute_List[[k]]
+  x = x[ind_children, ]
+  transfused = x$transfusion==1
+  lines(wtd.quantile(x$BD[!transfused],weights = x$weights[!transfused],probs = ps),
+        wtd.quantile(x$BD[transfused],weights = x$weights[transfused],probs = ps),col='red')
+}
+mtext('G', side = 3, adj = -0.03, line = 2)
+
+
+###**** Blood urea nitrogen *****
+ps=(0:99)/100
+plot(quantile(log(x$BUN[!transfused]),probs = ps),
+     quantile(log(x$BUN[transfused]),probs = ps),lwd=3,main='BUN',
+     xlab = 'Not transfused', ylab = 'Transfused', type='l')
+lines(c(-10,100), c(-10,100), lwd=2,lty=2)
+lines(wtd.quantile(log(x$BUN[!transfused]),weights = x$weights[!transfused],probs = ps),
+      wtd.quantile(log(x$BUN[transfused]),weights = x$weights[transfused],probs = ps),col='red')
+for(k in 1:length(Modified_Sm_Impute_List)){
+  ind_children =  Modified_Sm_Impute_List[[k]]$AgeInYear < 12 & !is.na(Modified_Sm_Impute_List[[k]]$weights)
+  x = Modified_Sm_Impute_List[[k]]
+  x = x[ind_children, ]
+  transfused = x$transfusion==1
+  lines(wtd.quantile(log(x$BUN[!transfused]),weights = x$weights[!transfused],probs = ps),
+        wtd.quantile(log(x$BUN[transfused]),weights = x$weights[transfused],probs = ps),col='red')
+}
+mtext('H', side = 3, adj = -0.03, line = 2)
 ```
 
-
+The large black dots show the estimated proportions in the dataset. The red dots show the estimated proportions after re-weighted with IPW for each imputed datatset. The black lines show qq-plots for the data. Red lines show qqplots for the re-weighted data.
