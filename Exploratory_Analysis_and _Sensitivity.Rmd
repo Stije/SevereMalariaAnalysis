@@ -2,6 +2,7 @@
 title: "Charactersing effect of anaemia on mortality in severe malaria"
 output:
   html_document:
+    toc: true
     keep_md: yes
     fig_caption: yes
 ---
@@ -364,7 +365,7 @@ plot(x_shock, 100*inv.logit(predsshock$fit),
      type='p', lwd=3, ylim = c(0,32), xaxt='n',
      pch=19, xlim = c(-.25,1.25))
 axis(1, at=x_shock, labels = c('No shock','Shock'),
-     tick = F,line = 1.5,cex.axis=.9)
+     tick = F,line = 0.5,cex.axis=.9)
 ys = 100*inv.logit(c(predsshock$fit + 1.96*predsshock$se.fit,
                      (predsshock$fit - 1.96*predsshock$se.fit)))
 arrows(x0 = x_shock[1],y0 = ys[1], x1 = x_shock[1], y1 = ys[3],angle = 90,

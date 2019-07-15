@@ -2,6 +2,7 @@
 title: "Charactersing effect of anaemia on mortality in severe malaria"
 output:
   html_document:
+    toc: true
     keep_md: yes
     fig_caption: yes
 ---

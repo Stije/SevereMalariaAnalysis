@@ -73,15 +73,10 @@ dataset$outcome[dataset$died=="No"] = 0
 table(dataset$outcome, useNA = 'ifany')/nrow(dataset)
 
 ## Hct 
-AQM=filter(dataset, studyID=='AQUAMAT')
-hist(AQM$lbihct,breaks = 0:50)
-View(AQM[!is.na(AQM$lbihct) & AQM$lbihct==8,c('Hbx_iSTAT', 'lbihct')])
 dataset$HCT = dataset$lbhct
 dataset$HCT[is.na(dataset$lbhct)] = dataset$hctadm[is.na(dataset$lbhct)]
 dataset$HCT[is.na(dataset$lbhct) & is.na(dataset$hctadm) ] = dataset$lbihct[is.na(dataset$lbhct) & is.na(dataset$hctadm) ] 
 dataset$HCT = as.numeric(as.character(dataset$HCT))
-hist(dataset$HCT, breaks = 0:66)
-hist(AQM$HCT, breaks = 0:66)
 
 # parasitaemia/ul
 dataset$paraul = as.numeric(as.character(dataset$paraul))
@@ -308,7 +303,8 @@ seaqmat$Unique_ID = apply(seaqmat, 1, function(x) paste(x['studyno'], 'SEAQUAMAT
 
 m = merge(m, seaqmat[,c('Unique_ID','transfusion')], by='Unique_ID', all = T)
 m$transfusion = m$transfusion.x
-m$transfusion[m$studyID=='SEAQUAMAT'] = m$transfusion.y[m$studyID=='SEAQUAMAT']
+# transfusion was not reliable recorded in SEAQUAMAT
+m$transfusion[m$studyID=='SEAQUAMAT'] = NA #m$transfusion.y[m$studyID=='SEAQUAMAT']
 
 table(m$studyID,m$transfusion,useNA = 'ifany')
 m = m[,!colnames(m) %in% c('transfusion.x','transfusion.y')]

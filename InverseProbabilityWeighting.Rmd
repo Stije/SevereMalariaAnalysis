@@ -10,16 +10,20 @@ knitr::opts_chunk$set(cache = TRUE, cache.comments = FALSE,
                       echo = T, include = TRUE, 
                       fig.width = 7, fig.height = 7,
                       fig.pos = 'H', 
-                      dev = 'cairo_pdf', dpi = 400)
+                      dev = c('png'), dpi = 400)
 
-RUN_MODELS = F
+RUN_MODELS = T
 library(lme4)
-library(dplyr)
-library(fields)
+library(plyr); library(dplyr)
+library(ipw)
+library(survey)
 library(boot)
-library(mice)
 library(plotrix)
-library(Hmisc)
+library(SDMTools)
+library(spatstat)
+
+Lower_HCT = 15
+Upper_HCT = 25
 ```
 
 ## Load dataset
@@ -49,274 +53,349 @@ unique_ids_Transfusion = Transfusion_Data$Unique_ID
 ```{r}
 load('RData/Multiple_Imputed_Datasets.RData')
 for(i in 1:length(SM_Impute_List)){
-  ind = SM_Impute_List[[i]]$Unique_ID %in% unique_ids_Transfusion
+  ind = SM_Impute_List[[i]]$Unique_ID %in% unique_ids_Transfusion & 
+    SM_Impute_List[[i]]$AgeInYear <= 12
   SM_Impute_List[[i]] = SM_Impute_List[[i]][ind,]
+  SM_Impute_List[[i]]$country = as.character(SM_Impute_List[[i]]$country)
+  SM_Impute_List[[i]]$country[SM_Impute_List[[i]]$country=='The Gambia'] = 'The_Gambia'
+  SM_Impute_List[[i]]$country = as.factor(SM_Impute_List[[i]]$country)
 }
 ```
 
-Set the lower and upper limits of HCT for the transfusion IPW analysis:
+
+
 ```{r}
-Lower_HCT_children = 15
-Upper_HCT_children = 25
-```
-
-
-
-We used the time-to-death stratified data to fit a propensity score model:
-```{r}
-if(RUN_MODELS){
-  # IPW model
-  DAG_fmla = "transfusion ~ HCT + coma + convulsions + 
-              log2(BUN) + BD + shock + hypoglycaemia + AgeInYear +
-              (1 | country)"
+k = 1
+par(mfrow=c(3,3))
+for(cc in unique(SM_Impute_List[[k]]$country)){
+  transfused = SM_Impute_List[[k]]$transfusion==1
+  ind_country = SM_Impute_List[[k]]$country == cc
   
-  Modified_Sm_Impute_List = SM_Impute_List
-  # fit the model to each dataset
-  for(k in 1:length(Modified_Sm_Impute_List)){
-    
-    # fit model
-    mod_weights = glmer(DAG_fmla, data = Modified_Sm_Impute_List[[k]],
-                        family=binomial) 
-    
-    
-    transfused = Modified_Sm_Impute_List[[k]]$transfusion==1
-    Modified_Sm_Impute_List[[k]]$weights = NA
-    # estimate IPWs
-    Modified_Sm_Impute_List[[k]]$weights[transfused] = 1/predict(mod_weights,                                                                 newdata=Modified_Sm_Impute_List[[k]][transfused,],
-                                                                 type='response')
-    Modified_Sm_Impute_List[[k]]$weights[!transfused] = 1/(1-predict(mod_weights,
-                                                                     newdata=Modified_Sm_Impute_List[[k]][!transfused,],
-                                                                     type='response'))
-    # trim weights greater than 100
-    Modified_Sm_Impute_List[[k]]$weights[Modified_Sm_Impute_List[[k]]$weights>100] = 100
-    # set weights outside the pre-specified window to NA
-    Modified_Sm_Impute_List[[k]]$weights[!(Modified_Sm_Impute_List[[k]]$HCT>=Lower_HCT_children &
-                                             Modified_Sm_Impute_List[[k]]$HCT<=Upper_HCT_children)] = NA
-    
-  }
-  save(Modified_Sm_Impute_List, file = 'RData/Imputed_List_Weights.RData')
-  
-} else {
-  load('RData/Imputed_List_Weights.RData')
-}
-
-
-mod_imputed_children = lapply(Modified_Sm_Impute_List, function(x){
-  ind_children = x[,'AgeInYear'] < 15
-  glm(formula = outcome ~ transfusion, 
-      data = x[ind_children,],
-      weights = weights,
-      family = 'quasibinomial')
-} )
-summary_mod = summary(pool(mod_imputed_children))
-
-
-writeLines(sprintf('The estimated odds ratio for death in the AQUAMAT study for those transfused versus those not is %s (%s-%s)',
-                   round(exp(summary_mod$estimate[2]),2),
-                   round(exp(summary_mod$estimate[2]-1.96*summary_mod$std.error[2]),2),
-                   round(exp(summary_mod$estimate[2]+1.96*summary_mod$std.error[2]),2)))
-
-```
-
-
-Plot an example of the reweighting:
-```{r Transfusion_IPW}
-par(las=1, mfrow=c(1,2))
-set.seed(73252)
-ks = sample(x = 1:length(Modified_Sm_Impute_List),1)
-
-for(k in ks){
-  ind_children =  Modified_Sm_Impute_List[[k]]$AgeInYear < 12
-  ind_adults = Modified_Sm_Impute_List[[k]]$AgeInYear >= 12
-  na_weights = is.na(Modified_Sm_Impute_List[[k]]$weights)
-  transfused = Modified_Sm_Impute_List[[k]]$transfusion==1
-  
-  hist(Modified_Sm_Impute_List[[k]]$HCT[ind_children&transfused],
+  hist(SM_Impute_List[[k]]$HCT[ind_country & transfused],
        breaks = seq(4,50, by = 1),
        col = adjustcolor('red',alpha.f = .3),
-       main='', xlab='Haematocrit (%)', ylab = 'Number of patients')
-  hist(Modified_Sm_Impute_List[[k]]$HCT[ind_children& !transfused],
+       main=cc, xlab='Haematocrit (%)', ylab = 'Number of patients')
+  hist(SM_Impute_List[[k]]$HCT[ind_country & !transfused],
        breaks = 4:50,
        add=T,col=adjustcolor('blue',alpha.f = .3))
-  abline(v=c(Lower_HCT_children, Upper_HCT_children), lwd=3)
-  
-  legend('topright', fill = adjustcolor(c('red','blue'),alpha.f = .3), 
-         legend = c('Transfused','Not transfused'))
-  
-  ind_not_na = !is.na(Modified_Sm_Impute_List[[k]]$weights)
-  weighted.hist(x = Modified_Sm_Impute_List[[k]]$HCT[ind_not_na & !transfused & ind_children],
-                w = Modified_Sm_Impute_List[[k]]$weights[ind_not_na& !transfused & ind_children],
-                col=adjustcolor('blue',alpha.f = .3),
-                breaks = seq(Lower_HCT_children, Upper_HCT_children, by = 1),
-                ylab = 'Pseudo number of patients',xaxt='n')
-  weighted.hist(x = Modified_Sm_Impute_List[[k]]$HCT[ind_not_na & transfused & ind_children],
-                w = Modified_Sm_Impute_List[[k]]$weights[ind_not_na & transfused & ind_children],
-                col=adjustcolor('red',alpha.f = .3),breaks = seq(Lower_HCT_children, Upper_HCT_children, by = 1),
-                add=T, ylab = '',xlab='Haematocrit (%)')
-  
+  writeLines(sprintf('The mortality in %s was %s%%', cc,
+                     round(100*mean(SM_Impute_List[[k]]$outcome[ind_country]))))
 }
 
-writeLines(sprintf('There are n=%s patients within the %s-%s range of haematocrit',
-                   sum(Modified_Sm_Impute_List[[k]]$HCT>=Lower_HCT_children & Modified_Sm_Impute_List[[k]]$HCT <=Upper_HCT_children),
-                   Lower_HCT_children, Upper_HCT_children))
+table(SM_Impute_List[[k]]$country, SM_Impute_List[[k]]$coma)
+table(SM_Impute_List[[k]]$country, SM_Impute_List[[k]]$transfusion)
 ```
 
 
-We show the weighted distributions for the 4 main variables: coma, shock, base deficit and blood urea nitrogen
-
-```{r comparison_IPW_distributions}
-par(las=1, bty='n')
-layout(mat = matrix(c(1,1,1,2,2,2,
-                      3,3,4,4,5,5,
-                      6,6,7,7,8,8), nrow = 3, byrow = T))
-
-hist(Modified_Sm_Impute_List[[k]]$HCT[ind_children&transfused],
-     breaks = seq(4,50, by = 1),
-     col = adjustcolor('red',alpha.f = .3),
-     main='All haematocrit values', 
-     xlab='Haematocrit (%)', ylab = 'Number of patients')
-hist(Modified_Sm_Impute_List[[k]]$HCT[ind_children& !transfused],
-     breaks = 4:50,
-     add=T,col=adjustcolor('blue',alpha.f = .3))
-abline(v=c(Lower_HCT_children, Upper_HCT_children), lwd=3)
-
-legend('topright', fill = adjustcolor(c('red','blue'),alpha.f = .3), 
-       legend = c('Transfused','Not transfused'))
-mtext('A', side = 3, adj = -0.03, line = 2)
-
-ind_not_na = !is.na(Modified_Sm_Impute_List[[k]]$weights)
-weighted.hist(x = Modified_Sm_Impute_List[[k]]$HCT[ind_not_na & !transfused & ind_children],
-              w = Modified_Sm_Impute_List[[k]]$weights[ind_not_na& !transfused & ind_children],
-              col=adjustcolor('blue',alpha.f = .3),
-              main = 'IPW haematocrits in 15-25% range',
-              breaks = seq(Lower_HCT_children, Upper_HCT_children, by = 1),
-              ylab = 'Pseudo number of patients',xaxt='n',xlab='Haematocrit (%)')
-weighted.hist(x = Modified_Sm_Impute_List[[k]]$HCT[ind_not_na & transfused & ind_children],
-              w = Modified_Sm_Impute_List[[k]]$weights[ind_not_na & transfused & ind_children],
-              col=adjustcolor('red',alpha.f = .3),
-              breaks = seq(Lower_HCT_children, Upper_HCT_children, by = 1),
-              add=T)
-mtext('B', side = 3, adj = -0.03, line = 2)
-
-
-k = 1
-ind_children =  Modified_Sm_Impute_List[[k]]$AgeInYear < 12 & !is.na(Modified_Sm_Impute_List[[k]]$weights)
-x = Modified_Sm_Impute_List[[k]]
-x = x[ind_children, ]
-transfused = x$transfusion==1
-###**** Coma *****
-plot(0:1,100*c(mean(x$coma[!transfused]), mean(x$coma[transfused])), xlim = c(0,1), 
-     ylim = 100*c(0.25,.4), xaxt='n',xlab='', main = 'Coma',
-     ylab = '%', pch=16, cex=2)
-axis(1, at =0:1, labels = c('Not transfused','Transfused'), tick = F)
-for(k in 1:length(Modified_Sm_Impute_List)){
-  ind_children =  Modified_Sm_Impute_List[[k]]$AgeInYear < 12 & !is.na(Modified_Sm_Impute_List[[k]]$weights)
-  x = Modified_Sm_Impute_List[[k]]
-  x = x[ind_children, ]
-  transfused = x$transfusion==1
-  points(jitter(1), 100* weighted.mean(x$coma[transfused], w = x$weights[transfused]), pch='.', col='red')
-  points(jitter(0), 100*weighted.mean(x$coma[!transfused], w = x$weights[!transfused]), pch='.', col='red')
-  
+We exclude the Congo: very low mortality and everyone gets transfused. We make a design matrix for the IPTW model
+```{r}
+for(i in 1:length(SM_Impute_List)){
+  ind = SM_Impute_List[[i]]$country != 'Congo' & !is.na(SM_Impute_List[[i]]$rr)
+  SM_Impute_List[[i]] = SM_Impute_List[[i]][ind,]
+  SM_Impute_List[[i]]$country = as.factor(as.character(SM_Impute_List[[i]]$country))
 }
-abline(h = 100*weighted.mean(x$coma, x$weights), lty=2)
-mtext('C', side = 3, adj = -0.03, line = 2)
-
-
-###**** Shock *****
-x$shock = as.numeric(as.character(x$shock))
-plot(0:1,100*c(mean(x$shock[!transfused]), mean(x$shock[transfused])), xlim = c(0,1), 
-     ylim = 100*c(.015,.035), xaxt='n',xlab='', main='Shock',
-     ylab = '%', pch=16, cex=2)
-axis(1, at =0:1, labels = c('Not transfused','Transfused'), tick = F)
-for(k in 1:length(Modified_Sm_Impute_List)){
-  ind_children =  Modified_Sm_Impute_List[[k]]$AgeInYear < 12 & !is.na(Modified_Sm_Impute_List[[k]]$weights)
-  x = Modified_Sm_Impute_List[[k]]
-  x = x[ind_children, ]
-  transfused = x$transfusion==1
-  x$shock = as.numeric(as.character(x$shock))
-  points(jitter(1), 100* weighted.mean(x$shock[transfused], w = x$weights[transfused]), pch='.', col='red')
-  points(jitter(0), 100*weighted.mean(x$shock[!transfused], w = x$weights[!transfused]), pch='.', col='red')
-  
+design_matrices = list()
+for(k in 1:length(SM_Impute_List)){
+  XX = model.matrix(~ transfusion + country + convulsions + HCT + log2(BUN) + 
+                      BD + AgeInYear + rr, 
+                    data = SM_Impute_List[[k]])
+  design_matrices[[k]] = as.data.frame(XX[, colnames(XX) != '(Intercept)'])
 }
-abline(h = 100*weighted.mean(x$shock,x$weights), lty=2)
-mtext('D', side = 3, adj = -0.03, line = 2)
-
-
-###**** Convulsions *****
-x$convulsions = as.numeric(as.character(x$convulsions))
-plot(0:1,100*c(mean(x$convulsions[!transfused]), mean(x$convulsions[transfused])), xlim = c(0,1), 
-     ylim = 100*c(.18,.32), xaxt='n',xlab='',main='Convulsions',
-     ylab = '%', pch=16, cex=2)
-axis(1, at =0:1, labels = c('Not transfused','Transfused'), tick = F)
-for(k in 1:length(Modified_Sm_Impute_List)){
-  ind_children =  Modified_Sm_Impute_List[[k]]$AgeInYear < 12 & !is.na(Modified_Sm_Impute_List[[k]]$weights)
-  x = Modified_Sm_Impute_List[[k]]
-  x = x[ind_children, ]
-  transfused = x$transfusion==1
-  x$convulsions = as.numeric(as.character(x$convulsions))
-  points(jitter(1), 100* weighted.mean(x$convulsions[transfused], w = x$weights[transfused]), pch='.', col='red')
-  points(jitter(0), 100*weighted.mean(x$convulsions[!transfused], w = x$weights[!transfused]), pch='.', col='red')
-  
-}
-abline(h = 100*weighted.mean(x$convulsions,x$weights), lty=2)
-mtext('E', side = 3, adj = -0.03, line = 2)
-
-###**** Hypoglycaemia *****
-x$hypoglycaemia = as.numeric(as.character(x$hypoglycaemia))
-plot(0:1,100*c(mean(x$hypoglycaemia[!transfused]), mean(x$hypoglycaemia[transfused])), xlim = c(0,1), 
-     ylim = 100*c(0.06,.12), xaxt='n',xlab='', main='Hypoglycaemia',
-     ylab = '%', pch=16, cex=2)
-axis(1, at =0:1, labels = c('Not transfused','Transfused'), tick = F)
-for(k in 1:length(Modified_Sm_Impute_List)){
-  ind_children =  Modified_Sm_Impute_List[[k]]$AgeInYear < 12 & !is.na(Modified_Sm_Impute_List[[k]]$weights)
-  x = Modified_Sm_Impute_List[[k]]
-  x = x[ind_children, ]
-  transfused = x$transfusion==1
-  x$convulsions = as.numeric(as.character(x$convulsions))
-  points(jitter(1), 100* weighted.mean(x$hypoglycaemia[transfused], w = x$weights[transfused]), pch='.', col='red')
-  points(jitter(0), 100*weighted.mean(x$hypoglycaemia[!transfused], w = x$weights[!transfused]), pch='.', col='red')
-  
-}
-abline(h = 100*weighted.mean(x$hypoglycaemia,x$weights), lty=2)
-mtext('F', side = 3, adj = -0.03, line = 2)
-
-
-###**** Base deficit *****
-ps=(1:99)/100
-plot(quantile(x$BD[!transfused],probs = ps),
-     quantile(x$BD[transfused],probs = ps),lwd=3, main='Base deficit',
-     xlab = 'Not transfused', ylab = 'Transfused', type='l')
-lines(c(-10,40), c(-10,40), lwd=2,lty=2)
-lines(wtd.quantile(x$BD[!transfused],weights = x$weights[!transfused],probs = ps),
-      wtd.quantile(x$BD[transfused],weights = x$weights[transfused],probs = ps),col='red')
-for(k in 1:length(Modified_Sm_Impute_List)){
-  ind_children =  Modified_Sm_Impute_List[[k]]$AgeInYear < 12 & !is.na(Modified_Sm_Impute_List[[k]]$weights)
-  x = Modified_Sm_Impute_List[[k]]
-  x = x[ind_children, ]
-  transfused = x$transfusion==1
-  lines(wtd.quantile(x$BD[!transfused],weights = x$weights[!transfused],probs = ps),
-        wtd.quantile(x$BD[transfused],weights = x$weights[transfused],probs = ps),col='red')
-}
-mtext('G', side = 3, adj = -0.03, line = 2)
-
-
-###**** Blood urea nitrogen *****
-ps=(0:99)/100
-plot(quantile(log(x$BUN[!transfused]),probs = ps),
-     quantile(log(x$BUN[transfused]),probs = ps),lwd=3,main='BUN',
-     xlab = 'Not transfused', ylab = 'Transfused', type='l')
-lines(c(-10,100), c(-10,100), lwd=2,lty=2)
-lines(wtd.quantile(log(x$BUN[!transfused]),weights = x$weights[!transfused],probs = ps),
-      wtd.quantile(log(x$BUN[transfused]),weights = x$weights[transfused],probs = ps),col='red')
-for(k in 1:length(Modified_Sm_Impute_List)){
-  ind_children =  Modified_Sm_Impute_List[[k]]$AgeInYear < 12 & !is.na(Modified_Sm_Impute_List[[k]]$weights)
-  x = Modified_Sm_Impute_List[[k]]
-  x = x[ind_children, ]
-  transfused = x$transfusion==1
-  lines(wtd.quantile(log(x$BUN[!transfused]),weights = x$weights[!transfused],probs = ps),
-        wtd.quantile(log(x$BUN[transfused]),weights = x$weights[transfused],probs = ps),col='red')
-}
-mtext('H', side = 3, adj = -0.03, line = 2)
 ```
 
-The large black dots show the estimated proportions in the dataset. The red dots show the estimated proportions after re-weighted with IPW for each imputed datatset. The black lines show qq-plots for the data. Red lines show qqplots for the re-weighted data.
+
+We used the time-to-death stratified data to fit a propensity score model.
+
+We use the package *ipw* that fits standard generalised linear models (fixed effects). We also try using random forests as there is a lot of non-linearity. However this overfits massively and doesn't manage to reduce the differences between groups.
+
+
+```{r}
+transfusion_coefs = array(dim=c(length(SM_Impute_List),2))
+transfusion_SEs = array(dim=c(length(SM_Impute_List),2))
+for(k in 1:length(SM_Impute_List)){
+  
+  transfused = SM_Impute_List[[k]]$transfusion==1
+  # using logistic regression models only
+  mod_iptw_country = ipwpoint(exposure = transfusion, 
+                              family = 'binomial', 
+                              link = 'logit', 
+                              numerator = ~ countryKenya + countryMozambique + countryNigeria + 
+                                countryRwanda + countryTanzania + countryUganda + countryThe_Gambia, 
+                              denominator = ~ .,
+                              data = design_matrices[[k]])
+  
+  # same model but without country specific numerators
+  mod_iptw = ipwpoint(exposure = transfusion, 
+                      family = 'binomial', 
+                      link = 'logit', 
+                      numerator = ~ 1, 
+                      denominator = ~ .,
+                      data = design_matrices[[k]])
+  
+  # using Random forests for the denominator
+  # RFmod = randomForest(x = design_matrices[[k]][, colnames(design_matrices[[k]])!='transfusion'], 
+  #                      y = as.factor(design_matrices[[k]]$transfusion), 
+  #                      ntree = 500,keep.forest=TRUE)
+  # preds_RF_denominator = predict(RFmod, newdata = design_matrices[[k]], type = 'prob')
+  # numerator_model = glm(transfusion ~ countryKenya + countryMozambique + countryNigeria + 
+  #                         countryRwanda + countryTanzania + countryUganda + countryThe_Gambia, 
+  #                       data = design_matrices[[k]], family = 'binomial')
+  # 
+  # preds_glm_numerator = predict(numerator_model, newdata = design_matrices[[k]], type = 'response')
+  # 
+  # SM_Impute_List[[k]]$RF_weights = NA
+  # SM_Impute_List[[k]]$RF_weights[transfused] = preds_glm_numerator[transfused]/preds_RF_denominator[transfused,2]
+  # SM_Impute_List[[k]]$RF_weights[!transfused] = (1-preds_glm_numerator[!transfused])/preds_RF_denominator[!transfused,1]
+  # 
+  SM_Impute_List[[k]]$sw = mod_iptw$ipw.weights
+  SM_Impute_List[[k]]$sw_country = mod_iptw_country$ipw.weights
+  
+  # select those within the HCT range of interest
+  analysis_ind = SM_Impute_List[[k]]$HCT <= Upper_HCT & 
+    SM_Impute_List[[k]]$HCT > Lower_HCT
+  
+  # fit robust estimator with two different set of weights
+  msm_country = (svyglm(outcome ~ transfusion, 
+                        design = svydesign(~ 1, weights = ~ sw_country,
+                                           data = SM_Impute_List[[k]][analysis_ind, ])))
+  
+  # msm_RFs = (svyglm(outcome ~ transfusion, 
+  #                       design = svydesign(~ 1, weights = ~ RF_weights,
+  #                                          data = SM_Impute_List[[k]][analysis_ind, ])))
+  # 
+  msm = (svyglm(outcome ~ transfusion, 
+                design = svydesign(~ 1, weights = ~ sw,
+                                   data = SM_Impute_List[[k]][analysis_ind, ])))
+  
+  transfusion_coefs[k,] = c(coef(msm_country)['transfusion'], 
+                            coef(msm)['transfusion'])
+  transfusion_SEs[k,] = c(summary(msm_country)$coefficients['transfusion','Std. Error'],
+                          summary(msm)$coefficients['transfusion','Std. Error'])
+}
+
+SE_globals = c(sqrt(mean(transfusion_SEs[,1]^2) + var(transfusion_coefs[,1])),
+               sqrt(mean(transfusion_SEs[,2]^2) + var(transfusion_coefs[,2])))
+Coefs_global = apply(transfusion_coefs,2,mean)
+
+writeLines(sprintf('There are %s children included in the analysis (with haematocrits between %s and %s%%)',
+                   sum(analysis_ind), Lower_HCT, Upper_HCT))
+
+writeLines(sprintf('The number of children transfused was %s, and the number not transfused was %s',
+                   table(SM_Impute_List[[k]]$transfusion[analysis_ind])[1],
+                   table(SM_Impute_List[[k]]$transfusion[analysis_ind])[2]))
+
+writeLines(sprintf('The odds ratio for death for the transfused versus not transfused, in children with baseline haematocrit between %s and %s%%, is estimated to be %s (%s-%s)',
+                   Lower_HCT, Upper_HCT, round(exp(Coefs_global[2]),2), 
+                   round(exp(Coefs_global[2]-1.96*SE_globals[2]),2),
+                   round(exp(Coefs_global[2]+1.96*SE_globals[2]),2)))
+```
+
+Lets examine the weights in one of the fits
+```{r}
+par(las=1, mfrow=c(2,1))
+k = sample(1:length(SM_Impute_List),1)
+plot(SM_Impute_List[[k]]$HCT, log10(mod_iptw$ipw.weights),
+     col=SM_Impute_List[[k]]$transfusion+1, xlab = 'Haematocrit', 
+     ylab = 'log 10 weight', main = 'Stabilised: marginal probability')
+abline(v = c(Lower_HCT, Upper_HCT), lty=2, lwd=2)
+
+plot(SM_Impute_List[[k]]$HCT, log10(mod_iptw_country$ipw.weights),
+     col=SM_Impute_List[[k]]$transfusion+1, xlab = 'Haematocrit', 
+     ylab = 'log 10 weight', main = 'Stabilised: country marginal probability')
+abline(v = c(Lower_HCT, Upper_HCT), lty=2, lwd=2)
+summary(mod_iptw_country$num.mod)
+summary(mod_iptw$den.mod)
+```
+
+Set the lower and upper limits of HCT for the transfusion IPW analysis and remove data outside the interval of interest:
+```{r}
+Mod_SM_Impute_List = SM_Impute_List
+for(k in 1:length(SM_Impute_List)){
+  analysis_ind = SM_Impute_List[[k]]$HCT <= Upper_HCT & 
+    SM_Impute_List[[k]]$HCT > Lower_HCT
+  Mod_SM_Impute_List[[k]] = SM_Impute_List[[k]][analysis_ind,]
+}
+```
+
+
+
+
+```{r}
+standardised_diff_binary = function(x, t, ws){
+  
+  ind = complete.cases(x)
+  x=x[ind]
+  t=t[ind]
+  ws=ws[ind]
+  
+  mu_treat = mean(x[t])
+  mu_untreat = mean(x[!t])
+  std_diff = 100 * (mu_treat - mu_untreat)/sqrt(((1-mu_treat)*mu_treat + mu_untreat*(1-mu_untreat))/2)
+  
+  mu_treat = weighted.mean(x[t],w = ws[t])
+  mu_untreat = weighted.mean(x[!t], w = ws[!t])
+  
+  var_treat = wt.var(x = x[t], wt = ws[t])
+  var_untreat = wt.var(x = x[!t], wt = ws[!t])
+  std_diff_weighted = 100 * (mu_treat - mu_untreat)/sqrt((var_treat + var_untreat)/2)
+  return(list(std_diff=std_diff, std_diff_weighted=std_diff_weighted))
+}
+
+standardised_diff_cont = function(x, t, ws){
+  
+  ind = complete.cases(x)
+  x=x[ind]
+  t=t[ind]
+  ws=ws[ind]
+  
+  
+  mu_treat = mean(x[t])
+  mu_untreat = mean(x[!t])
+  var_treat = var(x = x[t])
+  var_untreat = var(x = x[!t])
+  
+  std_diff = 100 * (mu_treat - mu_untreat)/sqrt((var_treat + var_untreat)/2)
+  
+  mu_treat = weighted.mean(x[t],w = ws[t])
+  mu_untreat = weighted.mean(x[!t], w = ws[!t])
+  var_treat = wt.var(x = x[t], wt = ws[t])
+  var_untreat = wt.var(x = x[!t], wt = ws[!t])
+  
+  std_diff_weighted = 100 * (mu_treat - mu_untreat)/sqrt((var_treat + var_untreat)/2)
+  return(list(std_diff=std_diff, std_diff_weighted=std_diff_weighted))
+}
+```
+
+
+```{r ecdf_plots_IPTW}
+par(mfrow=c(4,2))
+k=1
+transfused = Mod_SM_Impute_List[[k]]$transfusion==1
+ws = Mod_SM_Impute_List[[k]]$sw
+diffs = list()
+
+
+#Haematocrit
+plot(ecdf((Mod_SM_Impute_List[[k]]$HCT[transfused])),col =adjustcolor('red',alpha.f = .7),main='',xlab='Haematocrit', ylab = 'Proportion < x')
+lines(ecdf((Mod_SM_Impute_List[[k]]$HCT[!transfused])),col =adjustcolor('blue',alpha.f = .7))
+
+plot(ewcdf((Mod_SM_Impute_List[[k]]$HCT[transfused]),weights = ws),col =adjustcolor('red',alpha.f = .7),main='',xlab='Haematocrit', ylab = 'Proportion < x')
+lines(ewcdf((Mod_SM_Impute_List[[k]]$HCT[!transfused]),weights = ws),col =adjustcolor('blue',alpha.f = .7))
+
+x=standardised_diff_cont(x = Mod_SM_Impute_List[[k]]$HCT, 
+                         t = transfused,
+                         ws = Mod_SM_Impute_List[[k]]$sw)
+
+diffs[[1]] = list(Haematocrit = x)
+# Base deficit
+plot(ecdf((Mod_SM_Impute_List[[k]]$BD[transfused])),col =adjustcolor('red',alpha.f = .7),
+     main='',xlab='Base deficit', ylab = 'Proportion < x')
+lines(ecdf((Mod_SM_Impute_List[[k]]$BD[!transfused])),col =adjustcolor('blue',alpha.f = .7))
+
+plot(ewcdf((Mod_SM_Impute_List[[k]]$BD[transfused]),weights = ws),
+     col =adjustcolor('red',alpha.f = .7),main='',xlab='Base deficit', ylab = 'Proportion < x')
+lines(ewcdf((Mod_SM_Impute_List[[k]]$BD[!transfused]),weights = ws),col =adjustcolor('blue',alpha.f = .7))
+
+
+x=standardised_diff_cont(x = Mod_SM_Impute_List[[k]]$BD, 
+                         t = transfused,
+                         ws = Mod_SM_Impute_List[[k]]$sw_country)
+diffs[[2]] = list(BaseDeficit = x)
+
+# BUN 
+plot(ecdf(log(Mod_SM_Impute_List[[k]]$BUN[transfused])),col =adjustcolor('red',alpha.f = .7),
+     main='',xlab='Log blood urea nitrogen', ylab = 'Proportion < x')
+lines(ecdf(log(Mod_SM_Impute_List[[k]]$BUN[!transfused])),col =adjustcolor('blue',alpha.f = .7))
+
+plot(ewcdf(log(Mod_SM_Impute_List[[k]]$BUN[transfused]),weights = ws),
+     col =adjustcolor('red',alpha.f = .7),main='',xlab='Log blood urea nitrogen', ylab = 'Proportion < x')
+lines(ewcdf(log(Mod_SM_Impute_List[[k]]$BUN[!transfused]),weights = ws),
+      col =adjustcolor('blue',alpha.f = .7))
+x=standardised_diff_cont(x = log(Mod_SM_Impute_List[[k]]$BUN), 
+                         t = transfused,
+                         ws = ws)
+diffs[[3]] = list(BUN = x)
+
+# Hypoglycaemia
+x=standardised_diff_binary(x = Mod_SM_Impute_List[[k]]$hypoglycaemia, 
+                           t = transfused,
+                           ws = ws)
+diffs[[4]] = list(Hypoglycaemia = x)
+
+
+# Coma
+x=standardised_diff_binary(x = Mod_SM_Impute_List[[k]]$coma, 
+                           t = transfused,
+                           ws = ws)
+diffs[[5]] = list(Coma = x)
+
+# Shock
+x=standardised_diff_binary(x = as.numeric(as.character(Mod_SM_Impute_List[[k]]$shock)), 
+                           t = transfused,
+                           ws = ws)
+diffs[[6]] = list(Shock = x)
+
+# Convulsions
+x=standardised_diff_binary(x = as.numeric(as.character(Mod_SM_Impute_List[[k]]$convulsions)), 
+                           t = transfused,
+                           ws = ws)
+
+diffs[[7]] = list(Convulsions = x)
+
+
+# PO
+x= standardised_diff_binary(x = as.numeric(as.character(Mod_SM_Impute_List[[k]]$poedema)), 
+                            t = transfused,
+                            ws = ws)
+diffs[[8]] = list(PulmonaryOedema = x)
+
+# Respiratory rate
+plot(ecdf(round(Mod_SM_Impute_List[[k]]$rr[transfused])),
+     col =adjustcolor('red',alpha.f = .7),
+     main='',xlab='Respiratory rate', ylab = 'Proportion < x')
+lines(ecdf(round(Mod_SM_Impute_List[[k]]$rr[!transfused])),col =adjustcolor('blue',alpha.f = .7))
+
+plot(ewcdf(round(Mod_SM_Impute_List[[k]]$rr[transfused]),weights = ws),
+     col =adjustcolor('red',alpha.f = .7),main='',
+     xlab='Respiratory rate', ylab = 'Proportion < x')
+lines(ewcdf(round(Mod_SM_Impute_List[[k]]$rr[!transfused]),weights = ws),
+      col =adjustcolor('blue',alpha.f = .7))
+x = standardised_diff_cont(x = Mod_SM_Impute_List[[k]]$rr, 
+                           t = transfused,
+                           ws = ws)
+diffs[[9]] = list(RespRate = x)
+
+```
+
+
+```{r}
+Mydiffs = array(dim = c(length(diffs), 2))
+names(diffs)
+rownames(Mydiffs) = unlist(lapply(diffs, names))
+diffs = lapply(diffs, unlist)
+for(i in 1:nrow(Mydiffs)){
+  Mydiffs[i, ] = diffs[[i]]
+}
+# Mydiffs = abs(Mydiffs)
+Mydiffs = Mydiffs[order(Mydiffs[,1]), ]
+Mydiffs
+```
+
+
+```{r standardised_diff}
+par(las=1, mar=c(4,7,2,2))
+plot(Mydiffs[,1], 1:nrow(Mydiffs), xlim = range(Mydiffs), yaxt='n', ylab = '',
+     pch = 16, xlab = 'Standardised difference (%)')
+abline(v = c(-10,10), lty=2)
+abline(v=0)
+
+points(Mydiffs[,2], 1:nrow(Mydiffs), col ='red', pch =17)
+
+row_names = mapvalues(x = rownames(Mydiffs),  
+                      from = c('PulmonaryOedema', 'BaseDeficit', 'RespRate','BUN'),
+                      to = c('Pulmonary\nOedema', 'Base\nDeficit', 'Respiratory\nRate','Blood Urea\nNitrogen'))
+axis(2, at = 1:nrow(Mydiffs), labels = row_names)
+legend('topleft', inset = 0.02, pch = c(16,17), col=c('black','red'),
+       legend = c('Original population','IPW population'))
+```
+

@@ -2,6 +2,7 @@
 title: "Charactersing effect of anaemia on mortality in severe malaria"
 output:
   html_document:
+    toc: true
     fig_caption: yes
     keep_md: yes
 ---
@@ -160,7 +161,7 @@ for(ss in unique(m$studyID)){
 ## The mortality in QC was 17%
 ```
 
-### Multiple imputation using linear relationships
+# Multiple imputation using linear relationships
 
 The number of missing variables in the pooled data:
 
