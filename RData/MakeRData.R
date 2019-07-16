@@ -307,6 +307,6 @@ m$transfusion = m$transfusion.x
 m$transfusion[m$studyID=='SEAQUAMAT'] = NA #m$transfusion.y[m$studyID=='SEAQUAMAT']
 
 table(m$studyID,m$transfusion,useNA = 'ifany')
-m = m[,!colnames(m) %in% c('transfusion.x','transfusion.y')]
-save(m, file = '~/Dropbox/MORU/Causality/SevereMalariaAnalysis/RData/Data.RData')
+m = m[,!colnames(m) %in% c('transfusion.x','transfusion.y','StudyNumber','Unique_ID')]
+save(m, file = '../RData/Data.RData')
 
