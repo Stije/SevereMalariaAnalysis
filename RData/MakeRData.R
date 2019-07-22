@@ -188,31 +188,32 @@ dataset$shock =NA
 dataset$shock = dataset$systolicbpCri
 dataset$shock = as.character(dataset$shock)
 str(dataset$shock)
-dataset$shock[dataset$shock =='Yes'] <- 1
-dataset$shock[dataset$shock =='No'] =0
+dataset$shock[dataset$shock =='Yes'] = 1
+dataset$shock[dataset$shock =='No'] = 0
+table(dataset$shock,dataset$studyID, useNA = 'ifany')
 dataset$shock[is.na(dataset$shock)] = 0
 dataset$shock = as.factor(dataset$shock) 
 table(dataset$shock,useNA = 'ifany')
 
 
-#shock
-dataset$coma =NA
-dataset$coma[dataset$gcstotal<11] =1 
-dataset$coma[dataset$gcstotal<11] =1 
+# Glasgow coma scale
+dataset$gcse = as.numeric(as.character(dataset$gcse)) # eyes
+dataset$gcsv = as.numeric(as.character(dataset$gcsv)) # verbal
+dataset$gcsm = as.numeric(as.character(dataset$gcsm)) # motor
 
-dataset$gcse = as.numeric(as.character(dataset$gcse))
-dataset$gcsv = as.numeric(as.character(dataset$gcsv))
-dataset$gcsm = as.numeric(as.character(dataset$gcsm))
-
-dataset$GCS = NA
 dataset$GCS = dataset$gcstotal
-dataset$GCS <- dataset$gcse + dataset$gcsv + dataset$gcsm
+dataset$GCS[is.na(dataset$GCS)] = dataset$gcse[is.na(dataset$GCS)] + 
+  dataset$gcsv[is.na(dataset$GCS)] +
+  dataset$gcsm[is.na(dataset$GCS)]
 hist(dataset$GCS)
 
-dataset$coma[dataset$GCS <11] =1 
-dataset$coma[dataset$GCS >= 11] =0  
+dataset$coma[dataset$GCS <11] = 1 
+dataset$coma[dataset$GCS >= 11] = 0  
 
-dataset$coma[dataset$bcstotal <3] =1 
+dataset$BCS = dataset$bcstotal
+sum(is.na(dataset$BCS) & is.na(dataset$GCS))
+
+dataset$coma[dataset$bcstotal < 3] = 1 
 dataset$coma[dataset$bcstotal >= 3] =0 
 
 dataset$coma[dataset$cerebralCri=="Yes"] = 1 
@@ -220,17 +221,8 @@ dataset$coma[dataset$cerebralCri=="No"] = 0
 
 table(dataset$coma,useNA = 'ifany')
 
-##shock
-dataset$shock = dataset$systolicbpCri
-dataset$shock = as.character(dataset$shock)
-str(dataset$shock)
-dataset$shock[dataset$shock =='Yes'] <- 1
-dataset$shock[dataset$shock =='No'] =0
-dataset$shock[is.na(dataset$shock)] = 0
-dataset$shock = as.factor(dataset$shock) 
-table(dataset$shock,useNA = 'ifany')
 
-##shock
+## Convulsions
 dataset$convulsions = dataset$convulCri
 table(dataset$convulsions)
 dataset$convulsions = as.character(dataset$convulsions)
@@ -243,13 +235,6 @@ table(dataset$convulsions,useNA = 'ifany')
 #Age
 dataset$AgeInYear = as.numeric(dataset$AgeInYear)
 
-## Shock
-dataset$systolicbpCri = as.factor(dataset$systolicbpCri) 
-summary(dataset$systolicbpCri)
-dataset$SYS_BP_NUMERIC = dataset$systolicbpCri
-dataset$SYS_BP_NUMERIC[as.character(dataset$systolicbpCri)=='Yes']=1
-dataset$SYS_BP_NUMERIC[as.character(dataset$systolicbpCri)=='No']=0
-dataset$AgeInYear = as.numeric(dataset$AgeInYear)
 
 m = subset(dataset, 
            select=c(StudyNumber,year, country, studyID, 
