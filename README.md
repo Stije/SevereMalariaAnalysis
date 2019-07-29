@@ -15,11 +15,15 @@ This repository provides code underlying the results of two separate publication
 
 A very simple simulation model is given in `SelectionBiasSimulation.md` and corresponding RMarkdown. This shows that the expected effect between G6PDd and anaemia in malaria is large enough to explain all the estimated effect between coma and G6PDd observed in two previous publications: [Nature Genetics 2015](https://www.nature.com/articles/ng.3107) and [eLife 2017](https://elifesciences.org/articles/15085).
 
+The key plot is shown below. The thick jagged lines (estimated values from simulated data) almost go exactly through the intersection of the two dashed lines (observed values in the data).
+
+![](SelectionBiasSimulation_files/figure-html/ModelSimulation-1.png)
+
 ## Estimating causal effects in severe malaria.
 
 Here we report data on over 9000 patients with severe falciparum malaria, recruited over 35 years in multiple studies across Asia and Africa.
 Our main finding is that moderate anaemia has a protective effect (or at least is a risk factor associated with a lower risk of death). Overall we get the following effect sizes (note that the scale chosen for the continuous variables is equal to one standard deviation in the population):
-![fig1](FactorsCausingDeath_files/figure-html/Results_Comparison-1.png)
+![](FactorsCausingDeath_files/figure-html/Results_Comparison-1.png)
 
 The RMarkdown notebooks are arranged as follows:
 
