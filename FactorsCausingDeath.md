@@ -148,17 +148,17 @@ for(ss in unique(m$studyID)){
 
 ```
 ## 
-## The mortality in AAV was 10%
-## 
-## The mortality in AQ was 15%
-## 
 ## The mortality in Core Malaria was 22%
 ## 
-## The mortality in AQUAMAT was 10%
+## The mortality in QC was 17%
+## 
+## The mortality in AAV was 10%
 ## 
 ## The mortality in SEAQUAMAT was 19%
 ## 
-## The mortality in QC was 17%
+## The mortality in AQUAMAT was 10%
+## 
+## The mortality in AQ was 15%
 ```
 
 # Multiple imputation using linear relationships
@@ -170,16 +170,16 @@ round(apply(m,2, function(x) sum(is.na(x))),0)
 ```
 
 ```
-##      Unique_ID    StudyNumber           year        country        studyID 
-##              0              0            560              0              0 
-##     drug_class          shock    convulsions        poedema        outcome 
-##              0              0              0           5542              0 
-##      AgeInYear           coma            HCT       LPAR_pct             BD 
-##              0            239            870           1882           2375 
-##    bicarbonate             rr        lactate            BUN     creatinine 
-##           3679            369           7423           1544           7242 
-##  hypoglycaemia Timetodeathhrs      continent        drug_AS    transfusion 
-##            115           7850              0              0            881
+##           year        country        studyID     drug_class          shock 
+##            560              0              0              0              0 
+##    convulsions        poedema        outcome      AgeInYear           coma 
+##              0           5542              0              0            239 
+##            HCT       LPAR_pct             BD    bicarbonate             rr 
+##            870           1882           2375           3679            369 
+##        lactate            BUN     creatinine  hypoglycaemia Timetodeathhrs 
+##           7423           1544           7242            115           7850 
+##      continent        drug_AS    transfusion 
+##              0              0           9040
 ```
 
 ```r
@@ -187,16 +187,16 @@ round(apply(m,2, function(x) 100*sum(is.na(x)))/nrow(m),0)
 ```
 
 ```
-##      Unique_ID    StudyNumber           year        country        studyID 
-##              0              0              6              0              0 
-##     drug_class          shock    convulsions        poedema        outcome 
-##              0              0              0             61              0 
-##      AgeInYear           coma            HCT       LPAR_pct             BD 
-##              0              3             10             21             26 
-##    bicarbonate             rr        lactate            BUN     creatinine 
-##             41              4             82             17             80 
-##  hypoglycaemia Timetodeathhrs      continent        drug_AS    transfusion 
-##              1             87              0              0             10
+##           year        country        studyID     drug_class          shock 
+##              6              0              0              0              0 
+##    convulsions        poedema        outcome      AgeInYear           coma 
+##              0             61              0              0              3 
+##            HCT       LPAR_pct             BD    bicarbonate             rr 
+##             10             21             26             41              4 
+##        lactate            BUN     creatinine  hypoglycaemia Timetodeathhrs 
+##             82             17             80              1             87 
+##      continent        drug_AS    transfusion 
+##              0              0            100
 ```
 
 We make a few data adjustments for the model imputation and fitting:
@@ -403,7 +403,7 @@ mtext(side = 3, line = 1, text = 'Increased survival',adj = 0)
 mtext(side = 3, line = 1, text = 'Decreased survival',adj = 1)
 ```
 
-![](FactorsCausingDeath_files/figure-html/ForestPlot_SM-1.pdf)<!-- -->
+![](FactorsCausingDeath_files/figure-html/ForestPlot_SM-1.png)<!-- -->
 
 
 # Logistic regression model with subsets of the data
@@ -551,5 +551,5 @@ legend('bottomright', col = c('black',cols), bty='y',bg = 'white',
        legend = c('All data','African data','Asian data'),lwd=3, inset = 0.02)
 ```
 
-![](FactorsCausingDeath_files/figure-html/Results_Comparison-1.pdf)<!-- -->
+![](FactorsCausingDeath_files/figure-html/Results_Comparison-1.png)<!-- -->
 

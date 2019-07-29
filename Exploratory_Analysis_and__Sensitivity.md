@@ -29,50 +29,50 @@ First we look at the mortality rates across the different studies.
 
 
 ```
-## [1] "AAV , mortality of: 10 %"
-## [1] "AQ , mortality of: 15 %"
 ## [1] "Core Malaria , mortality of: 22 %"
-## [1] "AQUAMAT , mortality of: 10 %"
-## [1] "SEAQUAMAT , mortality of: 19 %"
 ## [1] "QC , mortality of: 17 %"
+## [1] "AAV , mortality of: 10 %"
+## [1] "SEAQUAMAT , mortality of: 19 %"
+## [1] "AQUAMAT , mortality of: 10 %"
+## [1] "AQ , mortality of: 15 %"
 ```
 
 We look at the quantiles of the ages in the different studies:
 
 ```
-## [1] "AAV, ages:15 AAV, ages:32 AAV, ages:77"
-## [1] "AQ, ages:15 AQ, ages:30 AQ, ages:79"
 ## [1] "Core Malaria, ages:1 Core Malaria, ages:26 Core Malaria, ages:80"
-## [1] "AQUAMAT, ages:0 AQUAMAT, ages:2 AQUAMAT, ages:78"
-## [1] "SEAQUAMAT, ages:2 SEAQUAMAT, ages:25 SEAQUAMAT, ages:87"
 ## [1] "QC, ages:1 QC, ages:4 QC, ages:10"
+## [1] "AAV, ages:15 AAV, ages:32 AAV, ages:77"
+## [1] "SEAQUAMAT, ages:2 SEAQUAMAT, ages:25 SEAQUAMAT, ages:87"
+## [1] "AQUAMAT, ages:0 AQUAMAT, ages:2 AQUAMAT, ages:78"
+## [1] "AQ, ages:15 AQ, ages:30 AQ, ages:79"
 ```
 
 ```
-## [1] "AAV"
-## 
-##     artemisinin non-artemisinin 
-##             370               0 
-## [1] "AQ"
-## 
-##     artemisinin non-artemisinin 
-##             284             276 
 ## [1] "Core Malaria"
 ## 
 ##     artemisinin non-artemisinin 
 ##             483             624 
-## [1] "AQUAMAT"
+## [1] "QC"
 ## 
 ##     artemisinin non-artemisinin 
-##            2746            2748 
+##               0              48 
+## [1] "AAV"
+## 
+##     artemisinin non-artemisinin 
+##             370               0 
 ## [1] "SEAQUAMAT"
 ## 
 ##     artemisinin non-artemisinin 
 ##             730             731 
-## [1] "QC"
+## [1] "AQUAMAT"
 ## 
 ##     artemisinin non-artemisinin 
-##               0              48
+##            2746            2748 
+## [1] "AQ"
+## 
+##     artemisinin non-artemisinin 
+##             284             276
 ```
 
 
@@ -133,7 +133,7 @@ Let's look at the linear associations between the key baseline variables. We use
 ## GCV = 70.143  Scale est. = 69.845    n = 5288
 ```
 
-![](Exploratory_Analysis_and__Sensitivity_files/figure-html/ExploratoryPlots-1.pdf)<!-- -->
+![](Exploratory_Analysis_and__Sensitivity_files/figure-html/ExploratoryPlots-1.png)<!-- -->
 
 Effect on survival 
 
@@ -168,7 +168,7 @@ modLPAR_pct=gam(outcome ~ s(LPAR_pct) + s(studyID, bs='re') + s(country, bs='re'
                 data = XX, family='binomial')
 ```
 
-![](Exploratory_Analysis_and__Sensitivity_files/figure-html/UnadjustedPlots-1.pdf)<!-- -->
+![](Exploratory_Analysis_and__Sensitivity_files/figure-html/UnadjustedPlots-1.png)<!-- -->
 
 Compute risk ratios with confidence intervals for the binary predictors:
 
@@ -374,7 +374,7 @@ legend('bottomright',col=c('green','blue'),inset = 0.01,
        legend = c('Asian data','African data'),lwd=3)
 ```
 
-![](Exploratory_Analysis_and__Sensitivity_files/figure-html/haematocrit_distributions-1.pdf)<!-- -->
+![](Exploratory_Analysis_and__Sensitivity_files/figure-html/haematocrit_distributions-1.png)<!-- -->
 
 
 # Sensitivity Analysis
@@ -421,22 +421,22 @@ summary(mod1)
 ## 
 ## Random effects:
 ##  Groups  Name        Variance Std.Dev.
-##  country (Intercept) 0.235273 0.48505 
-##  studyID (Intercept) 0.004596 0.06779 
+##  country (Intercept) 0.235275 0.48505 
+##  studyID (Intercept) 0.004595 0.06779 
 ## Number of obs: 5271, groups:  country, 15; studyID, 4
 ## 
 ## Fixed effects:
 ##                Estimate Std. Error z value Pr(>|z|)    
-## (Intercept)   -6.930507   0.349185 -19.848  < 2e-16 ***
-## HCT            0.012967   0.005811   2.231 0.025651 *  
-## LPAR_pct      -0.016817   0.066500  -0.253 0.800352    
-## coma           1.303101   0.110001  11.846  < 2e-16 ***
-## convulsions1   0.493248   0.122671   4.021  5.8e-05 ***
-## poedema1       0.225026   0.281040   0.801 0.423311    
-## log2(BUN)      0.608771   0.053665  11.344  < 2e-16 ***
+## (Intercept)   -6.930506   0.349177 -19.848  < 2e-16 ***
+## HCT            0.012967   0.005811   2.231 0.025650 *  
+## LPAR_pct      -0.016818   0.066500  -0.253 0.800350    
+## coma           1.303100   0.110001  11.846  < 2e-16 ***
+## convulsions1   0.493247   0.122671   4.021  5.8e-05 ***
+## poedema1       0.225029   0.281039   0.801 0.423302    
+## log2(BUN)      0.608771   0.053664  11.344  < 2e-16 ***
 ## BD             0.105341   0.007833  13.449  < 2e-16 ***
-## shock1        -0.152711   0.204050  -0.748 0.454221    
-## hypoglycaemia  0.553260   0.155038   3.569 0.000359 ***
+## shock1        -0.152711   0.204051  -0.748 0.454219    
+## hypoglycaemia  0.553262   0.155037   3.569 0.000359 ***
 ## drug_AS       -0.386722   0.100201  -3.859 0.000114 ***
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
@@ -507,15 +507,15 @@ print(Results)
 
 ```
 ##                lowerCI      mean   upperCI
-## drug_AS      0.5581564 0.6792801 0.8266885
-## shock1       0.5754231 0.8583779 1.2804711
-## HCT          0.9843492 0.8783824 0.7838232
-## LPAR_pct     0.8631577 0.9833232 1.1202178
-## poedema1     0.7219408 1.2523550 2.1724676
-## convulsions1 1.2876414 1.6376271 2.0827401
-## log2(BUN)    2.2214697 2.6244721 3.1005843
-## BD           2.4593147 2.8673981 3.3431963
-## coma         2.9668460 3.6806934 4.5662985
+## drug_AS      0.5581565 0.6792800 0.8266882
+## shock1       0.5754225 0.8583773 1.2804708
+## HCT          0.9843486 0.8783824 0.7838236
+## LPAR_pct     0.8631577 0.9833231 1.1202175
+## poedema1     0.7219449 1.2523593 2.1724704
+## convulsions1 1.2876421 1.6376255 2.0827350
+## log2(BUN)    2.2214740 2.6244704 3.1005742
+## BD           2.4593157 2.8673992 3.3431974
+## coma         2.9668440 3.6806900 4.5662930
 ##                                                       Y_Labels
 ## drug_AS         Artemisinin drug\nversus\nnon Artemisinin drug
 ## shock1                                     Shock\non admission
@@ -554,7 +554,7 @@ mtext(side = 3, line = 1, text = 'Increased survival',adj = 0)
 mtext(side = 3, line = 1, text = 'Decreased survival',adj = 1)
 ```
 
-![](Exploratory_Analysis_and__Sensitivity_files/figure-html/ForestPlot_CompleteData-1.pdf)<!-- -->
+![](Exploratory_Analysis_and__Sensitivity_files/figure-html/ForestPlot_CompleteData-1.png)<!-- -->
 
 # Trim very low haematocrits
 
@@ -747,7 +747,7 @@ mtext(side = 3, line = 1, text = 'Increased survival',adj = 0)
 mtext(side = 3, line = 1, text = 'Decreased survival',adj = 1)
 ```
 
-![](Exploratory_Analysis_and__Sensitivity_files/figure-html/ForestPlot_SM_trimmedVerySMA-1.pdf)<!-- -->
+![](Exploratory_Analysis_and__Sensitivity_files/figure-html/ForestPlot_SM_trimmedVerySMA-1.png)<!-- -->
 
 ## The effect of Transfusion: AAV, AQ and AQUAMAT
 
@@ -760,9 +760,7 @@ table(m$transfusion,m$studyID,useNA = 'ifany')
 ```
 ##       
 ##         AAV   AQ AQUAMAT Core Malaria   QC SEAQUAMAT
-##   0     232  420    2498          189   15      1454
-##   1     138  140    2996           64    6         7
-##   <NA>    0    0       0          854   27         0
+##   <NA>  370  560    5494         1107   48      1461
 ```
 
 Select data from AQUAMAT, AAV and AQ:
@@ -920,7 +918,7 @@ mtext(side = 3, line = 1, text = 'Increased survival',adj = 0)
 mtext(side = 3, line = 1, text = 'Decreased survival',adj = 1)
 ```
 
-![](Exploratory_Analysis_and__Sensitivity_files/figure-html/ForestPlot_Transfusion_Naive-1.pdf)<!-- -->
+![](Exploratory_Analysis_and__Sensitivity_files/figure-html/ForestPlot_Transfusion_Naive-1.png)<!-- -->
 
 We see that transfusion is associated with a lower odds of death.
 However, this is a biased estimate as transfusion is a collider (see paper).
@@ -942,13 +940,15 @@ round(100*table(Transfusion_Data$transfusion)/nrow(Transfusion_Data),1)
 ```
 
 ```
-## 
-##    0    1 
-## 48.5 51.5
+## numeric(0)
 ```
 
 ```r
 unique_ids_Transfusion = Transfusion_Data$Unique_ID
+```
+
+```
+## Warning: Unknown or uninitialised column: 'Unique_ID'.
 ```
 
 We load the imputed datasets and select patients whose transfusion information was recorded (AQ,AAV and AQUAMAT), and who did not die in the first 4 hours
@@ -1119,7 +1119,7 @@ mtext(side = 3, line = 1, text = 'Increased survival',adj = 0)
 mtext(side = 3, line = 1, text = 'Decreased survival',adj = 1)
 ```
 
-![](Exploratory_Analysis_and__Sensitivity_files/figure-html/ForestPlot_Transfusion_TD_stratified-1.pdf)<!-- -->
+![](Exploratory_Analysis_and__Sensitivity_files/figure-html/ForestPlot_Transfusion_TD_stratified-1.png)<!-- -->
 
 
 

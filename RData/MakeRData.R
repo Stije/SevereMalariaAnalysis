@@ -18,7 +18,7 @@ dataset$studyID=mapvalues(dataset$studyID, from = 'AQ (the Gambia)','QC')
 dataset = filter(dataset, studyID != 'AQGambia')
 dataset$studyID = as.factor(as.character(dataset$studyID))
 
-## add glucose, transfusion
+## add glucose
 
 dataset$hypoglycaemia = dataset$hyglycemiaCri
 
@@ -292,6 +292,6 @@ m$transfusion = m$transfusion.x
 m$transfusion[m$studyID=='SEAQUAMAT'] = NA #m$transfusion.y[m$studyID=='SEAQUAMAT']
 
 table(m$studyID,m$transfusion,useNA = 'ifany')
-m = m[,!colnames(m) %in% c('transfusion.x','transfusion.y','StudyNumber','Unique_ID')]
+m = m[,!colnames(m) %in% c('transfusion.x','transfusion.y','StudyNumber')]
 save(m, file = '../RData/Data.RData')
 

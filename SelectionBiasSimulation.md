@@ -13,6 +13,13 @@ output:
 
 ```r
 require(RColorBrewer)
+```
+
+```
+## Loading required package: RColorBrewer
+```
+
+```r
 RUN_SIM = T
 ```
 
